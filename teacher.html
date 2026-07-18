@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <title>카탈레이스 실험 교사 페이지</title>
+
+  <style>
+    :root {
+      --bg:#f4f7fb;
+      --card:#fff;
+      --text:#172033;
+      --muted:#667085;
+      --line:#dfe6ef;
+      --primary:#0f766e;
+      --shadow:0 10px 30px rgba(28,39,60,.08);
+    }
+
+    * {
+      box-sizing:border-box;
+    }
+
+    body {
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:
+        "Pretendard",
+        "Noto Sans KR",
+        system-ui,
+        sans-serif;
+      line-height:1.5;
+    }
+
+    .app {
+      width:min(1180px,calc(100% - 24px));
+      margin:auto;
+      padding:18px 0 40px;
+    }
+
+    .card {
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+    }
+
+    header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      padding:20px 22px;
+      margin-bottom:16px;
+    }
+
+    h1 {
+      font-size:26px;
+      margin:0;
+    }
+
+    header p {
+      margin:3px 0 0;
+      color:var(--muted);
+    }
+
+    .btn {
+      border:0;
+      border-radius:12px;
+      padding:11px 15px;
+      min-height:44px;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    .primary {
+      background:var(--primary);
+      color:#fff;
+    }
+
+    .soft {
+      background:#f2f4f7;
+      color:#344054;
+      border:1px solid #e4e7ec;
+    }
+
+    .panel {
+      padding:22px;
+    }
+
+    .field {
+      margin-bottom:14px;
+    }
+
+    label {
+      display:block;
+      font-weight:800;
+      margin-bottom:7px;
+    }
+
+    .input {
+      width:100%;
+      max-width:430px;
+      min-height:48px;
+      border:1.5px solid #cfd8e5;
+      border-radius:13px;
+      padding:11px 13px;
+      font-size:16px;
+    }
+
+    .notice {
+      padding:14px 16px;
+      border-radius:14px;
+      margin-bottom:14px;
+      background:#eef2ff;
+      color:#3043a7;
+      border:1px solid #d9e0ff;
+    }
+
+    .bad {
+      background:#fff0ee;
+      color:#912018;
+      border-color:#ffd2cc;
+    }
+
+    .stats {
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .stat {
+      padding:15px;
+      border:1px solid var(--line);
+      border-radius:15px;
+      background:#f8fafc;
+    }
+
+    .stat span {
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+    }
+
+    .stat strong {
+      display:block;
+      font-size:25px;
+      margin-top:3px;
+    }
+
+    .toolbar {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin:12px 0;
+    }
+
+    .toolbar .input {
+      max-width:320px;
+      min-height:42px;
+    }
+
+    .table-wrap {
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:15px;
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      min-width:740px;
+    }
+
+    th,
+    td {
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      text-align:center;
+    }
+
+    th {
+      background:#f8fafc;
+      font-size:13px;
+      color:#475467;
+    }
+
+    td:first-child,
+    th:first-child {
+      text-align:left;
+    }
+
+    .pill {
+      display:inline-block;
+      padding:5px 9px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+    }
+
+    .done {
+      background:#d1fadf;
+      color:#05603a;
+    }
+
+    .work {
+      background:#ffead5;
+      color:#934b00;
+    }
+
+    .overlay {
+      position:fixed;
+      inset:0;
+      background:rgba(16,24,40,.55);
+      display:grid;
+      place-items:center;
+      padding:16px;
+    }
+
+    .hidden {
+      display:none;
+    }
+
+    .modal {
+      width:min(820px,100%);
+      max-height:90vh;
+      overflow:auto;
+      background:#fff;
+      border-radius:20px;
+      padding:20px;
+    }
+
+    .modal-head {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    .close {
+      border:0;
+      background:#f2f4f7;
+      border-radius:50%;
+      width:40px;
+      height:40px;
+      font-size:22px;
+    }
+
+    .detail {
+      white-space:pre-wrap;
+      background:#f8fafc;
+      border:1px solid var(--line);
+      border-radius:13px;
+      padding:13px;
+      margin:8px 0 16px;
+    }
+
+    .muted {
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    @media(max-width:760px) {
+      header {
+        align-items:flex-start;
+        flex-direction:column;
+      }
+
+      .stats {
+        grid-template-columns:1fr 1fr;
+      }
+
+      .panel {
+        padding:15px;
+      }
+
+      .toolbar .input {
+        max-width:none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header class="card">
+      <div>
+        <h1>👩‍🏫 카탈레이스 실험 교사 페이지</h1>
+        <p>학생 진행률과 제출 내용을 확인합니다.</p>
+      </div>
+
+      <button
+        class="btn soft"
+        onclick="location.reload()"
+      >
+        ↻ 새로고침
+      </button>
+    </header>
+
+    <main class="card panel">
+      <div id="content"></div>
+    </main>
+  </div>
+
+  <div
+    id="overlay"
+    class="overlay hidden"
+  >
+    <div class="modal">
+      <div class="modal-head">
+        <h2>학생 응답 상세</h2>
+
+        <button
+          class="close"
+          onclick="closeDetail()"
+        >
+          ×
+        </button>
+      </div>
+
+      <div id="detail"></div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    const CONFIG = {
+      API_URL: 'https://script.google.com/macros/s/AKfycbwPkmzNw_ccqQUK6TdUylqVh5UbddS1P-d-ttujhZqftAvGtP9DaAkLQIPFUdiFXXzM/exec',
+      REFRESH_MS: 20000
+    };
+
+    const STEP_NAMES = [
+      '시작',
+      '가설',
+      '실험 설계',
+      '결과 기록',
+      '해석·그래프',
+      '결론·제출'
+    ];
+
+    const ROLE_LABELS = {
+      independent:'조작 변인',
+      controlled:'통제 변인',
+      dependent:'종속 변인'
+    };
+
+    const VARIABLE_LABELS = {
+      ph:'용액의 pH',
+      riseTime:'거름종이가 떠오르는 시간',
+      reactionRate:'카탈레이스의 반응 속도(1/t)',
+      h2o2:'과산화수소수의 농도와 부피',
+      catalase:'카탈레이스 용액의 농도',
+      paperSize:'거름종이 원판의 크기',
+      soakTime:'카탈레이스에 담그는 시간',
+      temperature:'반응 용액의 온도',
+      totalVolume:'반응 용액의 전체 부피'
+    };
+
+    const PREDICTION_LABELS = {
+      acid:'산성 조건에서 가장 빠를 것이다',
+      neutral:'중성에 가까운 조건에서 가장 빠를 것이다',
+      base:'염기성 조건에서 가장 빠를 것이다',
+      same:'pH가 달라도 큰 차이가 없을 것이다'
+    };
+
+    const SUPPORT_LABELS = {
+      yes:'지지한다',
+      partial:'부분적으로 지지한다',
+      no:'지지하지 않는다',
+      unclear:'판단하기 어렵다'
+    };
+
+    let rows = [];
+    let password = '';
+
+    function safe(value) {
+      return String(value ?? '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;');
+    }
+
+    function configured() {
+      return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/
+        .test(CONFIG.API_URL.trim());
+    }
+
+    async function post(payload) {
+      const response =
+        await fetch(
+          CONFIG.API_URL,
+          {
+            method:'POST',
+
+            headers:{
+              'Content-Type':
+                'text/plain;charset=utf-8'
+            },
+
+            body:JSON.stringify(payload),
+            redirect:'follow'
+          }
+        );
+
+      const text =
+        await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          '서버 응답을 읽지 못했습니다. Apps Script 배포 설정을 확인하세요.'
+        );
+      }
+
+      if (!data.ok) {
+        throw new Error(
+          data.message || '요청 실패'
+        );
+      }
+
+      return data;
+    }
+
+    function login() {
+      const content =
+        document.getElementById('content');
+
+      if (!configured()) {
+        content.innerHTML = `
+          <div class="notice bad">
+            <b>서버 주소가 설정되지 않았습니다.</b><br>
+            teacher.html의 CONFIG.API_URL에
+            Apps Script /exec 주소를 입력하세요.
+          </div>
+        `;
+
+        return;
+      }
+
+      content.innerHTML = `
+        <div class="notice">
+          학생용 링크와 분리된 교사용 화면입니다.
+        </div>
+
+        <div class="field">
+          <label for="pw">
+            교사용 비밀번호
+          </label>
+
+          <input
+            id="pw"
+            class="input"
+            type="password"
+            onkeydown="
+              if(event.key === 'Enter') {
+                load();
+              }
+            "
+          >
+        </div>
+
+        <button
+          class="btn primary"
+          onclick="load()"
+        >
+          교사 페이지 열기
+        </button>
+      `;
+    }
+
+    async function load() {
+      const enteredPassword =
+        document.getElementById('pw')?.value ||
+        password;
+
+      if (!enteredPassword) {
+        alert('비밀번호를 입력하세요.');
+        return;
+      }
+
+      password = enteredPassword;
+
+      document.getElementById(
+        'content'
+      ).innerHTML = `
+        <p>학생 데이터를 불러오는 중입니다…</p>
+      `;
+
+      try {
+        const data =
+          await post({
+            action:'list',
+            password
+          });
+
+        rows =
+          Array.isArray(data.rows)
+            ? data.rows
+            : [];
+
+        render();
+
+      } catch (error) {
+        document.getElementById(
+          'content'
+        ).innerHTML = `
+          <div class="notice bad">
+            <b>불러오기 실패</b><br>
+            ${safe(error.message)}
+          </div>
+
+          <button
+            class="btn soft"
+            onclick="login()"
+          >
+            다시 입력
+          </button>
+        `;
+      }
+    }
+
+    function render(query = '') {
+      const filtered =
+        rows.filter(
+          row =>
+            !query ||
+            (
+              `${row.studentId} ${row.name}`
+            )
+            .toLowerCase()
+            .includes(
+              query.toLowerCase()
+            )
+        );
+
+      const submitted =
+        rows.filter(
+          row => row.submitted
+        ).length;
+
+      const active =
+        rows.filter(
+          row =>
+            !row.submitted &&
+            Number(row.currentStep) > 1
+        ).length;
+
+      const averageProgress =
+        rows.length
+          ? Math.round(
+              rows.reduce(
+                (sum,row) =>
+                  sum +
+                  (
+                    Number(row.currentStep) ||
+                    1
+                  ),
+                0
+              ) /
+              rows.length /
+              6 *
+              100
+            )
+          : 0;
+
+      document.getElementById(
+        'content'
+      ).innerHTML = `
+        <div class="stats">
+          <div class="stat">
+            <span>참여 학생</span>
+            <strong>${rows.length}명</strong>
+          </div>
+
+          <div class="stat">
+            <span>최종 제출</span>
+            <strong>${submitted}명</strong>
+          </div>
+
+          <div class="stat">
+            <span>작성 중</span>
+            <strong>${active}명</strong>
+          </div>
+
+          <div class="stat">
+            <span>평균 진행률</span>
+            <strong>${averageProgress}%</strong>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input
+            class="input"
+            placeholder="학번·이름 검색"
+            value="${safe(query)}"
+            oninput="render(this.value)"
+          >
+
+          <button
+            class="btn soft"
+            onclick="load()"
+          >
+            ↻ 새로고침
+          </button>
+
+          <button
+            class="btn soft"
+            onclick="downloadCsv()"
+          >
+            CSV 내려받기
+          </button>
+
+          <span class="muted">
+            20초마다 자동 갱신
+          </span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>학생</th>
+                <th>현재 단계</th>
+                <th>업데이트</th>
+                <th>제출</th>
+                <th>상세</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${
+                filtered.length
+                  ? filtered.map(
+                      row => `
+                        <tr>
+                          <td>
+                            <b>${safe(row.studentId)}</b><br>
+
+                            <span class="muted">
+                              ${safe(row.name)}
+                            </span>
+                          </td>
+
+                          <td>
+                            ${
+                              safe(
+                                STEP_NAMES[
+                                  (
+                                    Number(row.currentStep) ||
+                                    1
+                                  ) - 1
+                                ] || '-'
+                              )
+                            }
+
+                            (
+                              ${
+                                Number(row.currentStep) ||
+                                1
+                              }/6
+                            )
+                          </td>
+
+                          <td>
+                            ${formatDate(row.updatedAt)}
+                          </td>
+
+                          <td>
+                            <span
+                              class="
+                                pill
+                                ${
+                                  row.submitted
+                                    ? 'done'
+                                    : 'work'
+                                }
+                              "
+                            >
+                              ${
+                                row.submitted
+                                  ? '제출 완료'
+                                  : '작성 중'
+                              }
+                            </span>
+                          </td>
+
+                          <td>
+                            <button
+                              class="btn soft"
+                              onclick="detailByKey('${
+                                safe(row.studentKey)
+                                  .replaceAll(
+                                    "'",
+                                    "\\'"
+                                  )
+                              }')"
+                            >
+                              보기
+                            </button>
+                          </td>
+                        </tr>
+                      `
+                    ).join('')
+                  : `
+                    <tr>
+                      <td colspan="5">
+                        표시할 학생이 없습니다.
+                      </td>
+                    </tr>
+                  `
+              }
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function formatDate(value) {
+      const date =
+        new Date(value);
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return '-';
+      }
+
+      return new Intl.DateTimeFormat(
+        'ko-KR',
+        {
+          month:'2-digit',
+          day:'2-digit',
+          hour:'2-digit',
+          minute:'2-digit'
+        }
+      ).format(date);
+    }
+
+    function detailByKey(key) {
+      const row =
+        rows.find(
+          item =>
+            item.studentKey === key
+        );
+
+      if (!row) {
+        return;
+      }
+
+      const calculated =
+        row.calculated || {};
+
+      const roles =
+        row.design?.roles || {};
+
+      const roleText =
+        Object.entries(roles)
+          .map(
+            ([id,role]) =>
+              `${VARIABLE_LABELS[id] || id}: ${ROLE_LABELS[role] || role}`
+          )
+          .join('\n');
+
+      const resultText =
+        ['A','B','C']
+          .map(
+            group => `
+${group} 조건: 실제 pH ${calculated[group]?.ph ?? '-'}, 시간 ${
+  Number.isFinite(
+    Number(calculated[group]?.time)
+  )
+    ? Number(
+        calculated[group].time
+      ).toFixed(2)
+    : '-'
+} s, 반응 속도 ${
+  Number.isFinite(
+    Number(calculated[group]?.rate)
+  )
+    ? Number(
+        calculated[group].rate
+      ).toFixed(4)
+    : '-'
+} s⁻¹
+            `.trim()
+          )
+          .join('\n');
+
+      const prediction =
+        PREDICTION_LABELS[
+          row.hypothesis?.prediction
+        ] ||
+        row.hypothesis?.prediction ||
+        '-';
+
+      const support =
+        SUPPORT_LABELS[
+          row.analysis?.supported
+        ] ||
+        row.analysis?.supported ||
+        '-';
+
+      document.getElementById(
+        'detail'
+      ).innerHTML = `
+        <h3>
+          ${safe(row.studentId)}
+          ${safe(row.name)}
+        </h3>
+
+        <h3>가설</h3>
+
+        <div class="detail">예상: ${safe(prediction)}
+
+까닭: ${safe(row.hypothesis?.reason || '-')}</div>
+
+        <h3>변인 분류</h3>
+
+        <div class="detail">${safe(roleText || '-')}</div>
+
+        <h3>측정 결과</h3>
+
+        <div class="detail">${safe(resultText)}</div>
+
+        <h3>결과 해석</h3>
+
+        <div class="detail">가설 판단: ${safe(support)}
+
+근거: ${safe(row.analysis?.evidence || '-')}
+
+해석: ${safe(row.analysis?.explanation || '-')}
+
+한계·오차: ${safe(row.analysis?.limitation || '-')}</div>
+
+        <h3>결론</h3>
+
+        <div class="detail">${safe(row.conclusion || '-')}</div>
+      `;
+
+      document
+        .getElementById('overlay')
+        .classList
+        .remove('hidden');
+    }
+
+    function closeDetail() {
+      document
+        .getElementById('overlay')
+        .classList
+        .add('hidden');
+    }
+
+    function escapeCsv(value) {
+      const text =
+        String(value ?? '');
+
+      return /[",\n]/.test(text)
+        ? `"${text.replaceAll('"','""')}"`
+        : text;
+    }
+
+    function downloadCsv() {
+      if (!rows.length) {
+        alert('내려받을 데이터가 없습니다.');
+        return;
+      }
+
+      const headers = [
+        '학번',
+        '이름',
+        '현재단계',
+        '제출여부',
+        '업데이트',
+
+        'A실제pH',
+        'A시간',
+        'A속도',
+
+        'B실제pH',
+        'B시간',
+        'B속도',
+
+        'C실제pH',
+        'C시간',
+        'C속도',
+
+        '가설',
+        '가설까닭',
+        '가설판단',
+        '판단근거',
+        '결과해석',
+        '한계오차',
+        '결론'
+      ];
+
+      const lines = [
+        headers,
+
+        ...rows.map(
+          row => [
+            row.studentId,
+            row.name,
+            row.currentStep,
+
+            row.submitted
+              ? '제출'
+              : '작성중',
+
+            row.updatedAt,
+
+            row.calculated?.A?.ph,
+            row.calculated?.A?.time,
+            row.calculated?.A?.rate,
+
+            row.calculated?.B?.ph,
+            row.calculated?.B?.time,
+            row.calculated?.B?.rate,
+
+            row.calculated?.C?.ph,
+            row.calculated?.C?.time,
+            row.calculated?.C?.rate,
+
+            PREDICTION_LABELS[
+              row.hypothesis?.prediction
+            ] ||
+            row.hypothesis?.prediction,
+
+            row.hypothesis?.reason,
+
+            SUPPORT_LABELS[
+              row.analysis?.supported
+            ] ||
+            row.analysis?.supported,
+
+            row.analysis?.evidence,
+            row.analysis?.explanation,
+            row.analysis?.limitation,
+            row.conclusion
+          ]
+        )
+      ]
+      .map(
+        row =>
+          row
+            .map(escapeCsv)
+            .join(',')
+      );
+
+      const blob =
+        new Blob(
+          [
+            '\ufeff' +
+            lines.join('\n')
+          ],
+          {
+            type:'text/csv;charset=utf-8'
+          }
+        );
+
+      const url =
+        URL.createObjectURL(blob);
+
+      const anchor =
+        document.createElement('a');
+
+      anchor.href = url;
+
+      anchor.download =
+        '카탈레이스_학생응답.csv';
+
+      anchor.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
+        login();
+
+        setInterval(
+          () => {
+            if (password) {
+              load();
+            }
+          },
+          CONFIG.REFRESH_MS
+        );
+      }
+    );
+  </script>
+</body>
+</html>
