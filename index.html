@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>카탈레이스 효소 반응 속도 탐구 활동지</title>
+    <title>생명과학 실험 활동지 - 카탈레이스 반응 속도</title>
     <!-- Tailwind CSS (UI 디자인용) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome (아이콘용) -->
@@ -30,9 +30,14 @@
                     <p class="text-sm text-slate-500 mt-0.5">실제 탐구 기록 및 과학적 결과 그래프 시각화 활동지</p>
                 </div>
             </div>
-            <button onclick="toggleDashboard()" id="dashBtn" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-800 transition shadow-sm flex items-center gap-2">
-                <i class="fa-solid fa-chalkboard-user"></i> 교사 대시보드로 이동
-            </button>
+            <div class="flex gap-2">
+                <button onclick="clearAllDataAndReset()" class="bg-slate-100 text-slate-600 px-3 py-2.5 rounded-xl font-semibold text-xs hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-rotate-left"></i> 활동지 초기화
+                </button>
+                <button onclick="toggleDashboard()" id="dashBtn" class="bg-slate-900 text-white px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm hover:bg-slate-800 transition shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-chalkboard-user"></i> 교사 대시보드
+                </button>
+            </div>
         </header>
 
         <!-- 인디케이터 (단계 표시 바) -->
@@ -54,7 +59,10 @@
 
         <!-- 메인 콘텐츠 영역 -->
         <main id="main-card" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 min-h-[450px] flex flex-col justify-between">
-            <!-- 내부 콘텐츠는 JavaScript가 동적으로 생성합니다. -->
+            <div class="text-center py-12">
+                <i class="fa-solid fa-spinner animate-spin text-4xl text-indigo-500 mb-4"></i>
+                <p class="text-slate-500 font-medium">실험 활동지를 로드하고 있습니다...</p>
+            </div>
         </main>
     </div>
 
@@ -71,6 +79,7 @@
                     <input type="password" id="dashPw" class="border rounded-xl px-4 py-2 w-full focus:outline-emerald-500" placeholder="비밀번호">
                     <button onclick="checkPw()" class="bg-emerald-500 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-600 transition">확인</button>
                 </div>
+                <p class="text-xs text-slate-400 mt-2">안내: 교사용 초기 비밀번호는 <code class="bg-slate-100 px-1 py-0.5 rounded font-bold">science</code> 입니다.</p>
             </div>
             <div id="dashContent" class="hidden space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -110,19 +119,24 @@
     </div>
 
     <script>
-        // 학생 데이터 상태 관리
-        let studentData = {
-            name: '', currentStep: 1,
-            hypothesis: '',
-            variables: { independent: '', dependent: '', controlled: [] },
-            expData: {
-                a: { ph: '', time: '' },
-                b: { ph: '', time: '' },
-                c: { ph: '', time: '' }
-            },
-            conclusion: '', isSubmitted: false
-        };
+        // 무결성 기준 기본 상태 정의
+        function getInitialState() {
+            return {
+                name: '', 
+                currentStep: 1,
+                hypothesis: '',
+                variables: { independent: '', dependent: '', controlled: [] },
+                expData: {
+                    a: { ph: '', time: '' },
+                    b: { ph: '', time: '' },
+                    c: { ph: '', time: '' }
+                },
+                conclusion: '', 
+                isSubmitted: false
+            };
+        }
 
+        let studentData = getInitialState();
         const totalSteps = 6;
         let myChart = null;
 
@@ -136,23 +150,43 @@
         ];
         let selectedVariableIds = { independent: null, dependent: null, controlled: [] };
 
-        window.onload = function() {
+        // 안전한 페이지 초기 구동 (데이터 복원 및 충돌 검사)
+        document.addEventListener('DOMContentLoaded', function() {
             try {
                 const saved = localStorage.getItem('enzyme_student_data');
                 if(saved) {
-                    studentData = JSON.parse(saved);
+                    const parsed = JSON.parse(saved);
+                    // 옛날 방식 데이터 구조(문자열형 단계)가 검출되면 안전하게 초기화
+                    if (typeof parsed.currentStep !== 'number' || parsed.currentStep < 1 || parsed.currentStep > 6) {
+                        console.warn("이전 오염된 데이터 포착: 자가 치료(Self-healing)를 가동합니다.");
+                        studentData = getInitialState();
+                        localStorage.setItem('enzyme_student_data', JSON.stringify(studentData));
+                    } else {
+                        studentData = parsed;
+                    }
                 }
             } catch(e) {
-                console.error("데이터 로드 실패, 초기화합니다.", e);
+                console.error("데이터 복원 실패, 초기값으로 실행합니다.", e);
+                studentData = getInitialState();
             }
             renderStep();
-        };
+        });
+
+        // 수동 초기화 버튼 (오류 자가 치료용)
+        function clearAllDataAndReset() {
+            if(confirm("모든 활동 기록을 다 지우고 1단계로 새로 시작하시겠습니까?")) {
+                localStorage.removeItem('enzyme_student_data');
+                studentData = getInitialState();
+                selectedVariableIds = { independent: null, dependent: null, controlled: [] };
+                renderStep();
+            }
+        }
 
         function saveData() {
             try {
                 localStorage.setItem('enzyme_student_data', JSON.stringify(studentData));
             } catch(e) {
-                console.error("데이터 저장 실패", e);
+                console.error("데이터 로컬 저장 실패", e);
             }
         }
 
@@ -195,6 +229,8 @@
             try {
                 updateIndicators();
                 const main = document.getElementById('main-card');
+                if(!main) return;
+                
                 let html = `<div class="flex-1">`;
                 
                 switch(studentData.currentStep) {
@@ -417,8 +453,17 @@
                         break;
                 }
             } catch(e) {
-                console.error("렌더링 오류 발생:", e);
-                document.getElementById('main-card').innerHTML = `<div class="p-4 text-red-500 font-medium">화면을 불러오는 도중 에러가 발생했습니다. 새로고침을 해주세요.</div>`;
+                console.error("렌더링 도중 예외가 발생했습니다:", e);
+                const main = document.getElementById('main-card');
+                if (main) {
+                    main.innerHTML = `
+                        <div class="p-6 text-center">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-3xl mb-2"></i>
+                            <h4 class="font-bold text-slate-800">이전 활동 기록 버전 충돌 감지</h4>
+                            <p class="text-xs text-slate-500 mt-1 mb-4">새로운 버전 업그레이드로 인해 브라우저의 옛날 캐시 데이터와 충돌이 일어났습니다.</p>
+                            <button onclick="clearAllDataAndReset()" class="bg-amber-500 text-white px-4 py-2 rounded-xl text-xs font-bold">임시 저장 비우고 다시 열기</button>
+                        </div>`;
+                }
             }
         }
 
@@ -483,11 +528,11 @@
             }
 
             if(selectedVariableIds.independent === 'v1' && selectedVariableIds.dependent === 'v2') {
-                guide.classList.remove('hidden');
+                if(guide) guide.classList.remove('hidden');
                 studentData.variables.independent = '용액의 pH 환경';
                 studentData.variables.dependent = '거름종이가 뜨는 시간';
             } else {
-                guide.classList.add('hidden');
+                if(guide) guide.classList.add('hidden');
             }
         }
 
@@ -656,15 +701,19 @@
             if(!modal.classList.contains('hidden')) {
                 document.getElementById('authZone').classList.remove('hidden');
                 document.getElementById('dashContent').classList.add('hidden');
-                document.getElementById('dashPw').value = '';
+                const pwInput = document.getElementById('dashPw');
+                if(pwInput) pwInput.value = '';
             }
         }
 
         function checkPw() {
-            const pw = document.getElementById('dashPw').value;
+            const pwInput = document.getElementById('dashPw');
+            const pw = pwInput ? pwInput.value : '';
             if(pw === 'science') {
-                document.getElementById('authZone').classList.add('hidden');
-                document.getElementById('dashContent').classList.remove('hidden');
+                const auth = document.getElementById('authZone');
+                const content = document.getElementById('dashContent');
+                if(auth) auth.classList.add('hidden');
+                if(content) content.classList.remove('hidden');
                 buildDashboardData();
             } else {
                 alert('비밀번호가 일치하지 않습니다.');
@@ -675,6 +724,7 @@
             const tbody = document.getElementById('dashTableBody');
             const totalEl = document.getElementById('stat-total');
             const submitEl = document.getElementById('stat-submit');
+            if(!tbody || !totalEl || !submitEl) return;
 
             const currentStudent = JSON.parse(localStorage.getItem('enzyme_student_data')) || studentData;
             
