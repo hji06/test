@@ -3,1868 +3,701 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>생명과학 실험 활동지 - 카탈레이스 반응 속도</title>
-    <!-- Tailwind CSS CDN -->
+    <title>카탈레이스 효소 반응 속도 탐구 활동지</title>
+    <!-- Tailwind CSS (UI 디자인용) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- FontAwesome for Icons -->
+    <!-- FontAwesome (아이콘용) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter & Gowun Dodum for friendly Korean look -->
-    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js (그래프 시각화용) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: 'Inter', 'Gowun Dodum', sans-serif;
-        }
-        /* Custom smooth transition */
-        .fade-in {
-            animation: fadeIn 0.4s ease-out forwards;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        /* Shake animation for feedback */
-        .shake {
-            animation: shake 0.5s ease-in-out;
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
+        .step-active { background-color: #10B981; color: white; }
+        .variable-card { cursor: pointer; transition: all 0.2s; }
+        .variable-card:hover { transform: translateY(-2px); }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800">
+<body class="bg-slate-50 min-h-screen font-sans antialiased text-slate-800 pb-12">
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Application Configuration & Safe Initialization
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'biotech-catalase-lab-2026';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' 
-        ? JSON.parse(__firebase_config) 
-        : {
-            apiKey: "",
-            authDomain: "dummy-domain.firebaseapp.com",
-            projectId: "dummy-project",
-            storageBucket: "dummy-bucket.appspot.com",
-            messagingSenderId: "12345",
-            appId: "1:12345:web:12345"
-          };
-
-    // Global App State
-    window.appState = {
-        appId: appId,
-        role: 'student', // 'student' or 'teacher'
-        currentStep: 'intro', // intro, step1, step2, step3, step4, step5, complete
-        studentInfo: { grade: '2', classNum: '', studentNum: '', name: '' },
-        hypothesis: { condition: '', result: '' },
-        design: {
-            // Variables state
-            independent: null, // Should match 'ph'
-            dependent: null,   // Should match 'float-time'
-            controlled: [],    // Should contain 'enzyme-vol', 'h2o2-conc', 'temp', 'paper-size'
-            // Test tube chemical properties assigned by students
-            tubes: {
-                tubeA: { chemical: 'acidic', ph: 2.0 },
-                tubeB: { chemical: 'neutral', ph: 7.0 },
-                tubeC: { chemical: 'basic', ph: 12.0 }
-            }
-        },
-        results: { 
-            tubeA: null, // Time in seconds
-            tubeB: null, 
-            tubeC: null 
-        },
-        analysis: { fastest: '', reason: '' },
-        conclusion: { matches: '', summary: '' },
-        submitted: false,
-        db: null,
-        auth: null,
-        userId: null,
-        allSubmissions: [] // For Teacher Dashboard
-    };
-
-    // Firebase Setup
-    let app, db, auth;
-    try {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        window.appState.db = db;
-        window.appState.auth = auth;
-    } catch (e) {
-        console.error("Firebase init failed, running in sandbox mode", e);
-    }
-
-    // Auth & Auto-Sign-In (RULE 3 Priority)
-    window.initAuth = async function() {
-        if (!auth) return;
-        try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        } catch (err) {
-            console.error("Auth failed:", err);
-        }
-    };
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            window.appState.userId = user.uid;
-            console.log("Logged in as:", user.uid);
-            if (window.appState.studentInfo.name) {
-                loadProgress();
-            }
-        }
-    });
-
-    // Save Progress to Firestore
-    window.saveProgress = async function() {
-        if (!db || !window.appState.userId || window.appState.role === 'teacher') return;
-        if (!window.appState.studentInfo.name) return; // Don't save empty profiles
-        
-        const pathDoc = doc(db, 'artifacts', appId, 'public', 'data', 'submissions', window.appState.userId);
-        try {
-            await setDoc(pathDoc, {
-                userId: window.appState.userId,
-                studentInfo: window.appState.studentInfo,
-                currentStep: window.appState.currentStep,
-                hypothesis: window.appState.hypothesis,
-                design: window.appState.design,
-                results: window.appState.results,
-                analysis: window.appState.analysis,
-                conclusion: window.appState.conclusion,
-                submitted: window.appState.submitted,
-                updatedAt: new Date().toISOString()
-            });
-        } catch (e) {
-            console.error("Failed to save progress:", e);
-        }
-    };
-
-    // Load Progress
-    async function loadProgress() {
-        if (!db || !window.appState.userId) return;
-        const pathDoc = doc(db, 'artifacts', appId, 'public', 'data', 'submissions', window.appState.userId);
-        try {
-            const snap = await getDoc(pathDoc);
-            if (snap.exists()) {
-                const data = snap.data();
-                window.appState.studentInfo = data.studentInfo || window.appState.studentInfo;
-                window.appState.currentStep = data.currentStep || 'intro';
-                window.appState.hypothesis = data.hypothesis || window.appState.hypothesis;
-                window.appState.design = data.design || window.appState.design;
-                window.appState.results = data.results || window.appState.results;
-                window.appState.analysis = data.analysis || window.appState.analysis;
-                window.appState.conclusion = data.conclusion || window.appState.conclusion;
-                window.appState.submitted = data.submitted || false;
-                
-                updateUI();
-            }
-        } catch (e) {
-            console.error("Failed to load progress:", e);
-        }
-    }
-
-    // Subscribe to Classroom Data for Teachers
-    let unsubscribeSubmissions = null;
-    window.startTeacherSubscription = function() {
-        if (!db) return;
-        const q = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
-        unsubscribeSubmissions = onSnapshot(q, (snapshot) => {
-            const list = [];
-            snapshot.forEach((doc) => {
-                list.push(doc.data());
-            });
-            window.appState.allSubmissions = list;
-            if (window.appState.role === 'teacher') {
-                renderTeacherDashboard();
-            }
-        }, (error) => {
-            console.error("Teacher subscription error:", error);
-        });
-    };
-
-    window.stopTeacherSubscription = function() {
-        if (unsubscribeSubmissions) {
-            unsubscribeSubmissions();
-            unsubscribeSubmissions = null;
-        }
-    };
-
-    // Initialize on Page Load
-    window.onload = async function() {
-        await window.initAuth();
-        updateUI();
-    };
-</script>
-
-<div id="app-container" class="max-w-4xl mx-auto px-4 py-6">
-
-    <!-- Header Section -->
-    <header class="flex flex-col md:flex-row md:items-center justify-between bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
-        <div class="flex items-center space-x-4">
-            <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-2xl shadow-inner relative overflow-hidden">
-                <i class="fa-solid fa-flask-vial"></i>
-            </div>
-            <div>
-                <h1 class="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">🔬 카탈레이스 효소 반응 속도 탐구</h1>
-                <p class="text-sm text-slate-500 font-medium">실제 탐구 기록 및 과학적 결과 그래프 시각화 활동지</p>
-            </div>
-        </div>
-        
-        <!-- Mode Switch Buttons & Student tag -->
-        <div class="mt-4 md:mt-0 flex items-center justify-between md:justify-end space-x-3 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
-            <div id="student-tag" class="hidden text-xs bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold px-3 py-1.5 rounded-full">
-                <i class="fa-solid fa-user-graduate mr-1"></i> <span id="header-student-name">학생 모드</span>
-            </div>
-            <button onclick="toggleRole()" id="role-toggle-btn" class="text-xs bg-slate-800 text-white font-bold px-4 py-2 rounded-xl shadow-md hover:bg-slate-700 transition flex items-center">
-                <i class="fa-solid fa-chalkboard-user mr-2"></i>교사 대시보드로 이동
-            </button>
-        </div>
-    </header>
-
-    <!-- Progress Steps Bar -->
-    <div id="student-progress-bar" class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 mb-6 flex justify-between items-center overflow-x-auto gap-4">
-        <div class="flex items-center space-x-2 flex-1 justify-between min-w-[550px]">
-            <div class="step-indicator flex items-center" data-step="intro">
-                <span class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm shadow">1</span>
-                <span class="ml-2 text-sm font-semibold text-slate-700">시작하기</span>
-            </div>
-            <div class="w-6 h-0.5 bg-slate-200 flex-1"></div>
-            
-            <div class="step-indicator flex items-center opacity-40" data-step="step1">
-                <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">2</span>
-                <span class="ml-2 text-sm font-semibold text-slate-500">가설 설정</span>
-            </div>
-            <div class="w-6 h-0.5 bg-slate-200 flex-1"></div>
-            
-            <div class="step-indicator flex items-center opacity-40" data-step="step2">
-                <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">3</span>
-                <span class="ml-2 text-sm font-semibold text-slate-500">실험 설계</span>
-            </div>
-            <div class="w-6 h-0.5 bg-slate-200 flex-1"></div>
-            
-            <div class="step-indicator flex items-center opacity-40" data-step="step3">
-                <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">4</span>
-                <span class="ml-2 text-sm font-semibold text-slate-500">결과 기록</span>
-            </div>
-            <div class="w-6 h-0.5 bg-slate-200 flex-1"></div>
-            
-            <div class="step-indicator flex items-center opacity-40" data-step="step4">
-                <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">5</span>
-                <span class="ml-2 text-sm font-semibold text-slate-500">속도 해석</span>
-            </div>
-            <div class="w-6 h-0.5 bg-slate-200 flex-1"></div>
-            
-            <div class="step-indicator flex items-center opacity-40" data-step="step5">
-                <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">6</span>
-                <span class="ml-2 text-sm font-semibold text-slate-500">결론 & 제출</span>
-            </div>
-        </div>
-    </div>
-
-    <main id="main-content" class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 min-h-[400px]">
-        <!-- Screen contents are injected dynamically -->
-    </main>
-
-    <!-- Custom Modal Dialog (Avoids native alert) -->
-    <div id="custom-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 fade-in">
-            <h3 id="modal-title" class="text-lg font-bold text-slate-800 mb-2">알림</h3>
-            <p id="modal-body" class="text-sm text-slate-600 mb-6">메시지 내용</p>
-            <div class="flex justify-end space-x-2" id="modal-actions">
-                <button onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition">닫기</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // General Dialog Popup Controller
-    function showModal(title, text, actionCallback = null, cancelCallback = null) {
-        const modal = document.getElementById('custom-modal');
-        document.getElementById('modal-title').textContent = title;
-        document.getElementById('modal-body').innerHTML = text;
-        const actionArea = document.getElementById('modal-actions');
-        
-        actionArea.innerHTML = '';
-        if (cancelCallback) {
-            const cancelBtn = document.createElement('button');
-            cancelBtn.className = "px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition";
-            cancelBtn.textContent = "취소";
-            cancelBtn.onclick = () => { closeModal(); cancelCallback(); };
-            actionArea.appendChild(cancelBtn);
-        }
-        
-        const confirmBtn = document.createElement('button');
-        confirmBtn.className = "px-5 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl text-sm shadow-md transition";
-        confirmBtn.textContent = "확인";
-        confirmBtn.onclick = () => {
-            closeModal();
-            if (actionCallback) actionCallback();
-        };
-        actionArea.appendChild(confirmBtn);
-        modal.classList.remove('hidden');
-    }
-
-    function closeModal() {
-        document.getElementById('custom-modal').classList.add('hidden');
-    }
-
-    // Role Toggling System (Science Teacher Verification)
-    function toggleRole() {
-        if (window.appState.role === 'student') {
-            showModal(
-                "🔑 교사 대시보드 로그인",
-                `교사 인증 비밀번호를 입력해주세요.<br><br><input type="password" id="teacher-pw" class="w-full mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-indigo-500" placeholder="비밀번호는 science 입니다">`,
-                () => {
-                    const pw = document.getElementById('teacher-pw').value;
-                    if (pw === 'science') {
-                        window.appState.role = 'teacher';
-                        document.getElementById('role-toggle-btn').innerHTML = `<i class="fa-solid fa-user-graduate mr-2"></i>학생 모드로 전환`;
-                        document.getElementById('role-toggle-btn').classList.replace('bg-slate-800', 'bg-indigo-600');
-                        document.getElementById('student-progress-bar').classList.add('hidden');
-                        document.getElementById('student-tag').classList.add('hidden');
-                        
-                        if (window.startTeacherSubscription) {
-                            window.startTeacherSubscription();
-                        }
-                        updateUI();
-                    } else {
-                        showModal("⚠️ 오류", "비밀번호가 맞지 않습니다.");
-                    }
-                },
-                () => { console.log('Teacher authorization canceled'); }
-            );
-        } else {
-            window.appState.role = 'student';
-            document.getElementById('role-toggle-btn').innerHTML = `<i class="fa-solid fa-chalkboard-user mr-2"></i>교사 대시보드로 이동`;
-            document.getElementById('role-toggle-btn').classList.replace('bg-indigo-600', 'bg-slate-800');
-            document.getElementById('student-progress-bar').classList.remove('hidden');
-            
-            if (window.stopTeacherSubscription) {
-                window.stopTeacherSubscription();
-            }
-            updateUI();
-        }
-    }
-
-    // Navigating Steps
-    function navigateTo(step) {
-        if (window.appState.role === 'student' && step !== 'intro' && !window.appState.studentInfo.name) {
-            showModal("입력 필요", "실험을 기록하기 전 반드시 상단의 학년, 반, 번호, 이름을 입력해주세요.");
-            return;
-        }
-        window.appState.currentStep = step;
-        if (window.appState.role === 'student' && window.saveProgress) {
-            window.saveProgress();
-        }
-        updateUI();
-    }
-
-    // Progress Bar Indicator Updates
-    function updateProgressIndicators() {
-        const steps = ['intro', 'step1', 'step2', 'step3', 'step4', 'step5'];
-        const currentIndex = steps.indexOf(window.appState.currentStep);
-        
-        document.querySelectorAll('.step-indicator').forEach((el, index) => {
-            const stepNumSpan = el.querySelector('span:first-child');
-            const stepTextSpan = el.querySelector('span:last-child');
-            
-            if (index < currentIndex) {
-                el.classList.remove('opacity-40');
-                stepNumSpan.className = "w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm border-2 border-indigo-500 shadow-sm";
-                stepNumSpan.innerHTML = '<i class="fa-solid fa-check"></i>';
-                stepTextSpan.className = "ml-2 text-sm font-semibold text-indigo-600";
-            } else if (index === currentIndex) {
-                el.classList.remove('opacity-40');
-                stepNumSpan.className = "w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md ring-4 ring-indigo-100";
-                stepNumSpan.innerHTML = (index + 1).toString();
-                stepTextSpan.className = "ml-2 text-sm font-bold text-slate-800";
-            } else {
-                el.classList.add('opacity-40');
-                stepNumSpan.className = "w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold text-sm border border-slate-200";
-                stepNumSpan.innerHTML = (index + 1).toString();
-                stepTextSpan.className = "ml-2 text-sm font-medium text-slate-400";
-            }
-        });
-    }
-
-    // Primary UI Dispatcher
-    function updateUI() {
-        if (window.appState.role === 'teacher') {
-            renderTeacherDashboard();
-            return;
-        }
-
-        const sInfo = window.appState.studentInfo;
-        if (sInfo.name) {
-            document.getElementById('student-tag').classList.remove('hidden');
-            document.getElementById('header-student-name').textContent = `${sInfo.grade}학년 ${sInfo.classNum}반 ${sInfo.studentNum}번 ${sInfo.name}`;
-        } else {
-            document.getElementById('student-tag').classList.add('hidden');
-        }
-
-        updateProgressIndicators();
-
-        const main = document.getElementById('main-content');
-        main.className = "bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 min-h-[400px] fade-in";
-        
-        switch (window.appState.currentStep) {
-            case 'intro':
-                renderIntroScreen(main);
-                break;
-            case 'step1':
-                renderHypothesisScreen(main);
-                break;
-            case 'step2':
-                renderDesignScreen(main);
-                break;
-            case 'step3':
-                renderLabScreen(main);
-                break;
-            case 'step4':
-                renderGraphScreen(main);
-                break;
-            case 'step5':
-                renderConclusionScreen(main);
-                break;
-            case 'complete':
-                renderCompleteScreen(main);
-                break;
-        }
-    }
-</script>
-
-<script>
-    function renderIntroScreen(container) {
-        const s = window.appState.studentInfo;
-        container.innerHTML = `
-            <div class="max-w-xl mx-auto py-4">
-                <div class="text-center mb-8">
-                    <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">II. 생물의 특성과 생명 활동</span>
-                    <h2 class="text-2xl font-black text-slate-800 mt-2 mb-3 md:text-3xl">효소 반응 속도 탐구 활동지</h2>
-                    <p class="text-slate-500 leading-relaxed text-sm md:text-base">
-                        이 활동지는 갤럭시 탭에 최적화되어 있습니다. 실제 실험을 수행하면서, <strong>감자 속에 가득 찬 카탈레이스 효소</strong>가 산성, 중성, 염기성 상태에서 각각 과산화수소를 분해하는 데 걸리는 실제 시간을 측정하고 이론을 분석해봅시다.
-                    </p>
+    <div class="max-w-5xl mx-auto px-4 pt-6">
+        <!-- 상단 헤더 -->
+        <header class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div class="flex items-center gap-4">
+                <div class="bg-indigo-50 p-3 rounded-xl text-indigo-600 text-2xl">
+                    <i class="fa-solid fa-flask-vial"></i>
                 </div>
-
-                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-8">
-                    <h3 class="text-md font-bold text-slate-700 mb-4 flex items-center">
-                        <i class="fa-solid fa-id-card mr-2 text-indigo-500"></i> 나의 학습 모둠 및 학생명 입력
-                    </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">학년</label>
-                            <select id="reg-grade" class="w-full p-3 bg-white border border-slate-200 rounded-xl outline-indigo-500 font-bold text-slate-700">
-                                <option value="2" ${s.grade === '2' ? 'selected' : ''}>2학년</option>
-                                <option value="1" ${s.grade === '1' ? 'selected' : ''}>1학년</option>
-                                <option value="3" ${s.grade === '3' ? 'selected' : ''}>3학년</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">반 (숫자만)</label>
-                            <input type="number" pattern="[0-9]*" id="reg-class" value="${s.classNum}" class="w-full p-3 bg-white border border-slate-200 rounded-xl outline-indigo-500 font-bold text-center" placeholder="예: 3">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">번호 (숫자만)</label>
-                            <input type="number" pattern="[0-9]*" id="reg-num" value="${s.studentNum}" class="w-full p-3 bg-white border border-slate-200 rounded-xl outline-indigo-500 font-bold text-center" placeholder="예: 15">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">이름</label>
-                            <input type="text" id="reg-name" value="${s.name}" class="w-full p-3 bg-white border border-slate-200 rounded-xl outline-indigo-500 font-bold" placeholder="홍길동">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-center">
-                    <button onclick="submitStudentInfo()" class="w-full md:w-auto px-8 py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-2">
-                        <span>실험 가설 설정하러 가기</span>
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    function submitStudentInfo() {
-        const grade = document.getElementById('reg-grade').value;
-        const classNum = document.getElementById('reg-class').value.trim();
-        const studentNum = document.getElementById('reg-num').value.trim();
-        const name = document.getElementById('reg-name').value.trim();
-
-        if (!classNum || !studentNum || !name) {
-            showModal("⚠️ 입력 완료 필요", "본인의 정보(반, 번호, 이름)를 완전히 기록해야 교사에게 올바른 정보가 제출됩니다.");
-            return;
-        }
-
-        window.appState.studentInfo = { grade, classNum, studentNum, name };
-        
-        if (window.saveProgress) {
-            window.saveProgress();
-        }
-        navigateTo('step1');
-    }
-</script>
-
-<script>
-    function renderHypothesisScreen(container) {
-        const h = window.appState.hypothesis;
-        container.innerHTML = `
-            <div class="max-w-2xl mx-auto">
-                <div class="mb-6">
-                    <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-lightbulb"></i> 1단계: 가설 설정</span>
-                    <h2 class="text-xl md:text-2xl font-black text-slate-800 mt-2">우리가 검증하고 싶은 탐구 가설은?</h2>
-                    <p class="text-sm text-slate-500 mt-1">이론적 기초를 바탕으로 빈칸을 터치하여 우리의 가설을 과학적 정합성에 맞게 설정해보세요.</p>
-                </div>
-
-                <!-- Theory Help Box -->
-                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 text-sm text-amber-900 flex items-start space-x-3">
-                    <span class="text-xl text-amber-500"><i class="fa-solid fa-graduation-cap"></i></span>
-                    <div>
-                        <strong class="font-bold">🧪 효소의 변성(Denaturation)과 pH의 관계:</strong>
-                        <p class="mt-1 leading-relaxed opacity-95">
-                            감자 속 <strong>카탈레이스 효소</strong>는 주성분이 단백질입니다. 단백질은 환경이 너무 강한 산성이나 염기성이 되면 본래의 3차원 입체 구조가 찌그러져(변성), 기질(과산화수소)과 더 이상 결합할 수 없게 됩니다. 따라서 생명체 내부와 비슷한 <strong>중성(pH 7 근처)</strong> 상태에서 가장 빠르게 산소를 내뿜으며 기질을 분해합니다.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Interactive Hypothesis Constructor -->
-                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-8 space-y-6">
-                    <h3 class="text-sm font-bold text-slate-700 flex items-center">
-                        <i class="fa-solid fa-pen-nib text-indigo-500 mr-2"></i> 가설 단어 터치해서 결정하기
-                    </h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <p class="text-xs font-bold text-slate-400 mb-2">1. 반응 속도가 가장 빠를 것으로 예상하는 액성(pH) 조건은?</p>
-                            <div class="grid grid-cols-3 gap-3">
-                                <button onclick="setHypothesisCondition('acidic')" id="btn-hyp-acidic" class="p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 ${h.condition === 'acidic' ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                    <i class="fa-solid fa-droplet text-red-400"></i><span>산성 (pH 2)</span>
-                                </button>
-                                <button onclick="setHypothesisCondition('neutral')" id="btn-hyp-neutral" class="p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 ${h.condition === 'neutral' ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                    <i class="fa-solid fa-droplet text-emerald-400"></i><span>중성 (pH 7)</span>
-                                </button>
-                                <button onclick="setHypothesisCondition('basic')" id="btn-hyp-basic" class="p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 ${h.condition === 'basic' ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                    <i class="fa-solid fa-droplet text-blue-400"></i><span>염기성 (pH 12)</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="text-xs font-bold text-slate-400 mb-2">2. 그 pH 환경에서 반응속도(거름종이가 뜨는 시간의 역수)는 어떨 것인가?</p>
-                            <div class="grid grid-cols-2 gap-3">
-                                <button onclick="setHypothesisResult('fast')" id="btn-hyp-fast" class="p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 ${h.result === 'fast' ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                    <i class="fa-solid fa-gauge-high text-amber-500"></i><span>가장 빠를 것이다 (시간 최소)</span>
-                                </button>
-                                <button onclick="setHypothesisResult('slow')" id="btn-hyp-slow" class="p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 ${h.result === 'slow' ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                    <i class="fa-solid fa-hourglass-start text-indigo-400"></i><span>가장 느릴 것이다 (시간 최대)</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Live Hypothesis Sentence Board -->
-                <div class="p-6 bg-slate-900 text-white rounded-2xl shadow-inner text-center mb-8">
-                    <p class="text-xs text-indigo-300 font-bold uppercase tracking-wider mb-2">확인된 우리 모둠의 탐구 가설</p>
-                    <p class="text-base md:text-lg font-bold leading-relaxed">
-                        " 카탈레이스 효소는 
-                        <span class="text-yellow-300 underline decoration-2 underline-offset-4" id="hyp-disp-cond">${h.condition ? getKoreanCond(h.condition) : '____'}</span> 환경일 때, 
-                        효소의 반응 속도(거름종이가 뜨는 속도)가 
-                        <span class="text-yellow-300 underline decoration-2 underline-offset-4" id="hyp-disp-res">${h.result ? getKoreanRes(h.result) : '____'}</span>. "
-                    </p>
-                </div>
-
-                <div class="flex justify-between items-center">
-                    <button onclick="navigateTo('intro')" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>이전
-                    </button>
-                    <button onclick="submitHypothesis()" class="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl text-sm shadow-md transition">
-                        가설 등록하고 변인 설계하기 <i class="fa-solid fa-arrow-right ml-2"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    function setHypothesisCondition(val) {
-        window.appState.hypothesis.condition = val;
-        document.getElementById('hyp-disp-cond').textContent = getKoreanCond(val);
-        ['acidic', 'neutral', 'basic'].forEach(cond => {
-            const btn = document.getElementById(`btn-hyp-${cond}`);
-            if (cond === val) {
-                btn.className = "p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 bg-indigo-500 border-indigo-500 text-white shadow-md";
-            } else {
-                btn.className = "p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 bg-white border-slate-200 hover:bg-slate-100";
-            }
-        });
-    }
-
-    function setHypothesisResult(val) {
-        window.appState.hypothesis.result = val;
-        document.getElementById('hyp-disp-res').textContent = getKoreanRes(val);
-        ['fast', 'slow'].forEach(res => {
-            const btn = document.getElementById(`btn-hyp-${res}`);
-            if (res === val) {
-                btn.className = "p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 bg-indigo-500 border-indigo-500 text-white shadow-md";
-            } else {
-                btn.className = "p-3 border rounded-xl text-sm font-bold transition flex items-center justify-center space-x-2 bg-white border-slate-200 hover:bg-slate-100";
-            }
-        });
-    }
-
-    function getKoreanCond(cond) {
-        if (cond === 'acidic') return '산성 (pH 2 부근)';
-        if (cond === 'neutral') return '중성 (pH 7 부근)';
-        if (cond === 'basic') return '염기성 (pH 12 부근)';
-        return '____';
-    }
-
-    function getKoreanRes(res) {
-        if (res === 'fast') return '가장 빠를 것이다';
-        if (res === 'slow') return '가장 느릴 것이다';
-        return '____';
-    }
-
-    function submitHypothesis() {
-        const h = window.appState.hypothesis;
-        if (!h.condition || !h.result) {
-            showModal("⚠️ 알림", "가설의 액성 조건과 예상 반응 결과를 모두 채워주어야 탐구 진행이 가능합니다.");
-            return;
-        }
-        navigateTo('step2');
-    }
-</script>
-
-<script>
-    function renderDesignScreen(container) {
-        const d = window.appState.design;
-        
-        // Variable Pool options definition
-        const variablesPool = [
-            { id: 'ph', name: '🧪 첨가하는 수용액의 pH (액성)', desc: '실험군마다 산성, 중성, 염기성으로 조작해 주는 조건' },
-            { id: 'float-time', name: '⏱️ 거름종이가 용액 수면 위로 완전히 뜨는 데 걸리는 시간', desc: '효소 분해 반응 속도를 알아보기 위해 측정하는 결과값' },
-            { id: 'enzyme-vol', name: '🥔 감자 즙(카탈레이스 효소)의 부피와 농도', desc: '모든 시험관에서 항상 동일하게 맞추어야 하는 조건' },
-            { id: 'h2o2-conc', name: '💧 과산화수소수의 부피와 3% 농도', desc: '모든 시험관에서 항상 동일하게 맞추어야 하는 조건' },
-            { id: 'temp', name: '🌡️ 실험실 온도 및 각 용액의 온도', desc: '모든 시험관에서 항상 동일하게 맞추어야 하는 조건' },
-            { id: 'paper-size', name: '✂️ 거름종이 조각의 크기와 원형 직경', desc: '모든 시험관에서 항상 동일하게 맞추어야 하는 조건' }
-        ];
-
-        container.innerHTML = `
-            <div class="max-w-3xl mx-auto">
-                <div class="mb-6">
-                    <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-gamepad"></i> 2단계: 과학적 실험 변인 매칭</span>
-                    <h2 class="text-xl md:text-2xl font-black text-slate-800 mt-1">우리 실험에 맞는 올바른 변인을 연결해 주세요</h2>
-                    <p class="text-xs text-slate-500 mt-1">
-                        아래에 제시된 탐구 변인 카드를 하나씩 확인한 후, 본인이 설계한 역할(독립변인, 종속변인, 통제변인) 버튼을 눌러 정확하게 배치해봅시다.
-                    </p>
-                </div>
-
-                <!-- Dynamic Variables Board Wrapper -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
-                    
-                    <!-- Left Column: Variable Cards Pool -->
-                    <div class="md:col-span-6 bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center">
-                            <i class="fa-solid fa-tags text-indigo-500 mr-1.5"></i> 변인 분류 카드 풀 (터치해서 아래 슬롯으로 이동)
-                        </h3>
-                        <div class="space-y-3" id="var-pool-container">
-                            ${variablesPool.map(v => {
-                                let statusText = "";
-                                if (d.independent === v.id) statusText = " [독립변인 설정됨]";
-                                else if (d.dependent === v.id) statusText = " [종속변인 설정됨]";
-                                else if (d.controlled.includes(v.id)) statusText = " [통제변인 설정됨]";
-
-                                const isAssigned = d.independent === v.id || d.dependent === v.id || d.controlled.includes(v.id);
-
-                                return `
-                                    <div class="p-3 bg-white border ${isAssigned ? 'border-indigo-400 bg-indigo-50/20' : 'border-slate-200'} rounded-xl text-left transition shadow-sm">
-                                        <div class="font-bold text-xs text-slate-800">${v.name}</div>
-                                        <div class="text-[10px] text-slate-400 mt-0.5">${v.desc}</div>
-                                        
-                                        <!-- Interactive Placement Buttons for Tablets -->
-                                        <div class="mt-2.5 flex flex-wrap gap-1.5">
-                                            <button onclick="assignVariable('${v.id}', 'independent')" class="text-[9px] font-bold px-2 py-1 rounded ${d.independent === v.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">독립변인 설정</button>
-                                            <button onclick="assignVariable('${v.id}', 'dependent')" class="text-[9px] font-bold px-2 py-1 rounded ${d.dependent === v.id ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">종속변인 설정</button>
-                                            <button onclick="assignVariable('${v.id}', 'controlled')" class="text-[9px] font-bold px-2 py-1 rounded ${d.controlled.includes(v.id) ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">통제변인으로 추가</button>
-                                            ${isAssigned ? `<button onclick="clearVariable('${v.id}')" class="text-[9px] font-bold px-1.5 py-1 rounded bg-red-100 text-red-700 ml-auto">해제</button>` : ''}
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Variables Board Slots -->
-                    <div class="md:col-span-6 space-y-4">
-                        
-                        <!-- Independent Slot -->
-                        <div class="bg-indigo-50/60 p-4 rounded-2xl border border-indigo-100">
-                            <h4 class="text-xs font-bold text-indigo-900 flex items-center mb-2">
-                                <span class="w-2 h-2 rounded-full bg-indigo-500 inline-block mr-1.5"></span> 독립 변인 (조작 변인 - 다르게 해줄 조건)
-                            </h4>
-                            <div class="min-h-[50px] bg-white border border-dashed border-indigo-200 rounded-xl p-2.5 text-xs flex items-center justify-center font-bold text-slate-600">
-                                ${d.independent ? `✅ ${variablesPool.find(x => x.id === d.independent).name}` : '<span class="text-slate-400">카드의 [독립변인 설정]을 터치하세요</span>'}
-                            </div>
-                        </div>
-
-                        <!-- Dependent Slot -->
-                        <div class="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-100">
-                            <h4 class="text-xs font-bold text-emerald-900 flex items-center mb-2">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1.5"></span> 종속 변인 (결과물 - 측정할 조건)
-                            </h4>
-                            <div class="min-h-[50px] bg-white border border-dashed border-emerald-200 rounded-xl p-2.5 text-xs flex items-center justify-center font-bold text-slate-600">
-                                ${d.dependent ? `✅ ${variablesPool.find(x => x.id === d.dependent).name}` : '<span class="text-slate-400">카드의 [종속변인 설정]을 터치하세요</span>'}
-                            </div>
-                        </div>
-
-                        <!-- Controlled Slot -->
-                        <div class="bg-amber-50/60 p-4 rounded-2xl border border-amber-100">
-                            <h4 class="text-xs font-bold text-amber-900 flex items-center mb-2">
-                                <span class="w-2 h-2 rounded-full bg-amber-500 inline-block mr-1.5"></span> 통제 변인 (일정하게 유지해 줄 모든 조건들)
-                            </h4>
-                            <div class="min-h-[90px] bg-white border border-dashed border-amber-200 rounded-xl p-3 text-xs flex flex-col gap-1.5 justify-center">
-                                ${d.controlled.length > 0 ? d.controlled.map(cid => `<div class="font-bold text-slate-700"><i class="fa-solid fa-lock text-amber-500 mr-1.5"></i>${variablesPool.find(x => x.id === cid).name}</div>`).join('') : '<span class="text-slate-400 text-center block">카드의 [통제변인으로 추가]를 터치하세요 (여러 개 선택 필수)</span>'}
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Test Tube Setup -->
-                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 mb-8">
-                    <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center">
-                        <i class="fa-solid fa-vials text-indigo-600 mr-2"></i> 시험관(A, B, C) 세부 액성 설계
-                    </h3>
-                    <p class="text-xs text-slate-500 mb-4">
-                        각 시험관에 주입할 액체를 선택하고, 예측되는 대략적인 타겟 pH를 할당해 줍니다. (이후 3단계에서 정확한 실측값으로 세부 조정합니다.)
-                    </p>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        
-                        <!-- Tube A Setup -->
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-6 h-6 bg-red-100 text-red-600 rounded-full font-bold text-xs flex items-center justify-center">A</span>
-                                <span class="font-bold text-xs text-slate-700">시험관 A</span>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1">용액 종류 선택</label>
-                                <select onchange="updateTubeDesign('tubeA', 'chemical', this.value)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700">
-                                    <option value="acidic" ${d.tubes.tubeA.chemical === 'acidic' ? 'selected' : ''}>묽은 염산 수용액 (강산성)</option>
-                                    <option value="neutral" ${d.tubes.tubeA.chemical === 'neutral' ? 'selected' : ''}>증류수 (중성)</option>
-                                    <option value="basic" ${d.tubes.tubeA.chemical === 'basic' ? 'selected' : ''}>수산화나트륨 수용액 (강염기성)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Tube B Setup -->
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full font-bold text-xs flex items-center justify-center">B</span>
-                                <span class="font-bold text-xs text-slate-700">시험관 B</span>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1">용액 종류 선택</label>
-                                <select onchange="updateTubeDesign('tubeB', 'chemical', this.value)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700">
-                                    <option value="neutral" ${d.tubes.tubeB.chemical === 'neutral' ? 'selected' : ''}>증류수 (중성)</option>
-                                    <option value="acidic" ${d.tubes.tubeB.chemical === 'acidic' ? 'selected' : ''}>묽은 염산 수용액 (강산성)</option>
-                                    <option value="basic" ${d.tubes.tubeB.chemical === 'basic' ? 'selected' : ''}>수산화나트륨 수용액 (강염기성)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Tube C Setup -->
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full font-bold text-xs flex items-center justify-center">C</span>
-                                <span class="font-bold text-xs text-slate-700">시험관 C</span>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1">용액 종류 선택</label>
-                                <select onchange="updateTubeDesign('tubeC', 'chemical', this.value)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700">
-                                    <option value="basic" ${d.tubes.tubeC.chemical === 'basic' ? 'selected' : ''}>수산화나트륨 수용액 (강염기성)</option>
-                                    <option value="acidic" ${d.tubes.tubeC.chemical === 'acidic' ? 'selected' : ''}>묽은 염산 수용액 (강산성)</option>
-                                    <option value="neutral" ${d.tubes.tubeC.chemical === 'neutral' ? 'selected' : ''}>증류수 (중성)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Live Dynamic Experimental Guide -->
-                <div class="bg-slate-900 text-white rounded-2xl p-6 mb-8 shadow-md">
-                    <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3 flex items-center justify-between">
-                        <span><i class="fa-solid fa-list-check mr-2"></i> 실시간 자동 생성 설계 검토</span>
-                        <span id="design-validation-badge" class="text-[9px] px-2 py-0.5 rounded font-black">체크 중...</span>
-                    </h3>
-                    <div id="design-guide-content" class="text-xs space-y-3 leading-relaxed text-slate-300">
-                        <!-- Filled in updateDesignGuide() -->
-                    </div>
-                </div>
-
-                <!-- Navigation buttons -->
-                <div class="flex justify-between items-center">
-                    <button onclick="navigateTo('step1')" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>이전으로
-                    </button>
-                    <button onclick="submitExperimentalDesign()" class="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl text-sm shadow-md transition">
-                        설계 등록하고 실전 측정하러 가기 <i class="fa-solid fa-arrow-right ml-2"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        updateDesignGuide();
-    }
-
-    function assignVariable(vid, slotType) {
-        const d = window.appState.design;
-        
-        // Remove from other slots to prevent duplicate assignment
-        if (d.independent === vid) d.independent = null;
-        if (d.dependent === vid) d.dependent = null;
-        const cIdx = d.controlled.indexOf(vid);
-        if (cIdx > -1) d.controlled.splice(cIdx, 1);
-
-        // Assign to new slot
-        if (slotType === 'independent') {
-            d.independent = vid;
-        } else if (slotType === 'dependent') {
-            d.dependent = vid;
-        } else if (slotType === 'controlled') {
-            d.controlled.push(vid);
-        }
-
-        renderDesignScreen(document.getElementById('main-content'));
-    }
-
-    function clearVariable(vid) {
-        const d = window.appState.design;
-        if (d.independent === vid) d.independent = null;
-        if (d.dependent === vid) d.dependent = null;
-        const cIdx = d.controlled.indexOf(vid);
-        if (cIdx > -1) d.controlled.splice(cIdx, 1);
-
-        renderDesignScreen(document.getElementById('main-content'));
-    }
-
-    function updateTubeDesign(tube, key, val) {
-        window.appState.design.tubes[tube][key] = val;
-        // Auto-assign default theoretical pH value on select
-        if (key === 'chemical') {
-            if (val === 'acidic') window.appState.design.tubes[tube].ph = 2.0;
-            else if (val === 'neutral') window.appState.design.tubes[tube].ph = 7.0;
-            else if (val === 'basic') window.appState.design.tubes[tube].ph = 12.0;
-        }
-        updateDesignGuide();
-    }
-
-    // Dynamic generation of experimental procedure matching current student inputs
-    function updateDesignGuide() {
-        const d = window.appState.design;
-        const guideContainer = document.getElementById('design-guide-content');
-        const badge = document.getElementById('design-validation-badge');
-        if (!guideContainer || !badge) return;
-
-        // Scientific Correctness evaluation logic
-        const isIndependentCorrect = (d.independent === 'ph');
-        const isDependentCorrect = (d.dependent === 'float-time');
-        // Needs at least 3 controlled variables correct (enzyme-vol, h2o2-conc, temp, paper-size)
-        const expectedControls = ['enzyme-vol', 'h2o2-conc', 'temp', 'paper-size'];
-        const matchesControlsCount = d.controlled.filter(v => expectedControls.includes(v)).length;
-        const isControlledCorrect = matchesControlsCount >= 3;
-
-        // Test Tubes chemical set evaluation (A: acidic, B: neutral, C: basic)
-        const isTubesCorrect = (d.tubes.tubeA.chemical === 'acidic' && d.tubes.tubeB.chemical === 'neutral' && d.tubes.tubeC.chemical === 'basic');
-
-        const overallSuccess = isIndependentCorrect && isDependentCorrect && isControlledCorrect && isTubesCorrect;
-
-        if (overallSuccess) {
-            badge.textContent = "✅ 완벽한 설계 설계 완료!";
-            badge.className = "text-[9px] px-2.5 py-1 rounded bg-emerald-600 text-white font-black shadow-sm";
-            guideContainer.innerHTML = `
-                <div class="space-y-3">
-                    <p class="font-bold text-white text-sm"><i class="fa-solid fa-vials text-indigo-400 mr-1"></i> [자동 생성] 설정한 완벽한 설계에 따른 탐구 가이드:</p>
-                    <ol class="list-decimal list-inside space-y-2 text-slate-300">
-                        <li>
-                            <strong class="text-white">실험 준비 및 통제:</strong> 과산화수소수의 농도와 부피, 감자즙의 양, 거름종이 조각의 크기를 정확히 동일하게 통제합니다.
-                        </li>
-                        <li>
-                            <strong class="text-white">기질 및 액성 분주:</strong> 
-                            시험관 <span class="bg-red-500/30 text-red-300 px-1.5 py-0.5 rounded font-bold">A</span>에 묽은 염산, 
-                            시험관 <span class="bg-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded font-bold">B</span>에 증류수, 
-                            시험관 <span class="bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded font-bold">C</span>에 NaOH 수용액을 각각 넣습니다.
-                        </li>
-                        <li>
-                            <strong class="text-white">실제 pH 측정:</strong> 각 시험관의 반응 물질에 3% H₂O₂를 주입하기 직전, 실제 pH 시험지나 pH 미터기로 실측 pH 값을 꼭 읽고 기록해 둡니다.
-                        </li>
-                        <li>
-                            <strong class="text-white">반응 개시 및 측정:</strong> 동그란 거름종이를 핀셋으로 감자즙에 적셔 가라앉히고 수면 위까지 상승하는 데 걸린 초 단위를 측정합니다.
-                        </li>
-                    </ol>
-                </div>
-            `;
-        } else {
-            badge.textContent = "⚠️ 설계 조정이 필요합니다";
-            badge.className = "text-[9px] px-2.5 py-1 rounded bg-amber-500 text-slate-900 font-black";
-
-            let advices = [];
-            if (!isIndependentCorrect) advices.push("의도적으로 변화를 주는 <strong class='text-white'>'조작 변인(독립변인)'</strong>은 수용액의 pH여야 합니다.");
-            if (!isDependentCorrect) advices.push("실험 측정 결과에 해당하는 <strong class='text-white'>'종속 변인'</strong>은 거름종이가 완전히 떠오르는 데 걸린 시간이어야 합니다.");
-            if (!isControlledCorrect) advices.push("실험의 정밀도를 위해 <strong class='text-white'>'통제 변인'</strong>(감자즙 양, 과산화수소 농도 및 부피, 온도, 거름종이 크기 등)을 최소 3개 이상 등록해주세요.");
-            if (!isTubesCorrect) advices.push("시험관 A, B, C의 액성 구성을 <strong class='text-white'>A(산성) - B(중성) - C(염기성)</strong> 조합으로 완성해야 대조군 비교가 가능합니다.");
-
-            guideContainer.innerHTML = `
-                <div class="space-y-2">
-                    <p class="font-bold text-amber-300 text-xs"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 올바른 탐구를 설계하기 위한 실시간 코칭 제안:</p>
-                    <ul class="list-disc list-inside space-y-1 text-slate-300">
-                        ${advices.map(a => `<li>${a}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-        }
-    }
-
-    function submitExperimentalDesign() {
-        const d = window.appState.design;
-        const isIndependentCorrect = (d.independent === 'ph');
-        const isDependentCorrect = (d.dependent === 'float-time');
-        const expectedControls = ['enzyme-vol', 'h2o2-conc', 'temp', 'paper-size'];
-        const matchesControlsCount = d.controlled.filter(v => expectedControls.includes(v)).length;
-        const isControlledCorrect = matchesControlsCount >= 3;
-        const isTubesCorrect = (d.tubes.tubeA.chemical === 'acidic' && d.tubes.tubeB.chemical === 'neutral' && d.tubes.tubeC.chemical === 'basic');
-
-        if (!isIndependentCorrect || !isDependentCorrect || !isControlledCorrect || !isTubesCorrect) {
-            showModal("⚠️ 설계 오류 보완 필요", "설정된 과학적 탐구 변인이나 시험관 설정이 일치하지 않습니다. 실시간 설계 검토 조언을 참고하여 수정해주십시오.");
-            return;
-        }
-
-        navigateTo('step3');
-    }
-</script>
-
-<script>
-    let activeTimer = null;
-    let timerStartTime = 0;
-    let timerElapsedTime = 0;
-    let activeTargetTube = null;
-
-    function renderLabScreen(container) {
-        const d = window.appState.design;
-        const r = window.appState.results;
-
-        container.innerHTML = `
-            <div class="max-w-3xl mx-auto">
-                <div class="mb-6">
-                    <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-vial-circle-check"></i> 3단계: 실제 측정 결과 기록</span>
-                    <h2 class="text-xl md:text-2xl font-black text-slate-800 mt-2">수행한 실제 오프라인 실험 수치 기록</h2>
-                    <p class="text-sm text-slate-500 mt-1">
-                        이 단계는 실제 실험실 테이블에서 측정한 실측 데이터를 정확하게 웹앱에 옮겨 쓰는 단계입니다. 
-                    </p>
-                </div>
-
-                <!-- Guidance message with notice -->
-                <div class="bg-indigo-50/70 rounded-2xl p-5 border border-indigo-100 mb-8 space-y-2">
-                    <h4 class="text-xs font-bold text-indigo-900 flex items-center">
-                        <i class="fa-solid fa-circle-exclamation text-indigo-600 mr-1.5"></i> 실제 탐구 안내 수칙
-                    </h4>
-                    <p class="text-[11px] text-slate-600 leading-relaxed">
-                        1. 수용액과 과산화수소수(기질)가 섞인 뒤, 거름종이 조각을 완전히 수면 끝에 닿도록 떨어뜨린 순간을 정해진 초(s) 단위로 기록합니다.<br>
-                        2. <strong>스톱워치 도구</strong>를 사용하면, 누르는 즉시 시작되고 정지 시 자동으로 소수점이 채워져 기록이 한층 편리해집니다.
-                    </p>
-                </div>
-
-                <!-- Interactive 3 Test Tubes Recording Blocks -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    
-                    <!-- Tube A Recording block -->
-                    <div class="bg-red-50/30 border border-red-100 rounded-2xl p-4 flex flex-col justify-between">
-                        <div class="text-center mb-3">
-                            <span class="w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center mx-auto mb-1">A</span>
-                            <h3 class="font-bold text-xs text-slate-700">산성 시험관</h3>
-                            <p class="text-[10px] text-slate-400">묽은 염산 수용액 투입</p>
-                        </div>
-
-                        <!-- Real physical parameters inputs -->
-                        <div class="space-y-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">🧪 실측 pH 값 입력</label>
-                                <input type="number" step="0.1" min="0" max="14" id="ph-tubeA" value="${d.tubes.tubeA.ph}" onchange="updateRealPH('tubeA', this.value)" class="w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-red-700 font-mono outline-indigo-500" placeholder="예: 2.1">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">⏱️ 떠오른 시간(초)</label>
-                                <input type="number" step="0.01" min="0" id="time-tubeA" value="${r.tubeA || ''}" onchange="updateRealTime('tubeA', this.value)" class="w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 font-mono outline-indigo-500" placeholder="기록(수동입력)">
-                            </div>
-                        </div>
-
-                        <!-- Stopwatch Helper Link -->
-                        <button onclick="openTimerHelper('tubeA')" class="mt-3 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] rounded-lg transition flex items-center justify-center space-x-1">
-                            <i class="fa-solid fa-stopwatch"></i><span>타이머 자동 측정</span>
-                        </button>
-                    </div>
-
-                    <!-- Tube B Recording block -->
-                    <div class="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4 flex flex-col justify-between">
-                        <div class="text-center mb-3">
-                            <span class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center mx-auto mb-1">B</span>
-                            <h3 class="font-bold text-xs text-slate-700">중성 시험관</h3>
-                            <p class="text-[10px] text-slate-400">증류수 수용액 투입</p>
-                        </div>
-
-                        <!-- Real physical parameters inputs -->
-                        <div class="space-y-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">🧪 실측 pH 값 입력</label>
-                                <input type="number" step="0.1" min="0" max="14" id="ph-tubeB" value="${d.tubes.tubeB.ph}" onchange="updateRealPH('tubeB', this.value)" class="w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-emerald-700 font-mono outline-indigo-500" placeholder="예: 7.2">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">⏱️ 떠오른 시간(초)</label>
-                                <input type="number" step="0.01" min="0" id="time-tubeB" value="${r.tubeB || ''}" onchange="updateRealTime('tubeB', this.value)" class="w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 font-mono outline-indigo-500" placeholder="기록(수동입력)">
-                            </div>
-                        </div>
-
-                        <button onclick="openTimerHelper('tubeB')" class="mt-3 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] rounded-lg transition flex items-center justify-center space-x-1">
-                            <i class="fa-solid fa-stopwatch"></i><span>타이머 자동 측정</span>
-                        </button>
-                    </div>
-
-                    <!-- Tube C Recording block -->
-                    <div class="bg-blue-50/30 border border-blue-100 rounded-2xl p-4 flex flex-col justify-between">
-                        <div class="text-center mb-3">
-                            <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center mx-auto mb-1">C</span>
-                            <h3 class="font-bold text-xs text-slate-700">염기성 시험관</h3>
-                            <p class="text-[10px] text-slate-400">수산화나트륨 투입</p>
-                        </div>
-
-                        <!-- Real physical parameters inputs -->
-                        <div class="space-y-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">🧪 실측 pH 값 입력</label>
-                                <input type="number" step="0.1" min="0" max="14" id="ph-tubeC" value="${d.tubes.tubeC.ph}" onchange="updateRealPH('tubeC', this.value)" class="w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-blue-700 font-mono outline-indigo-500" placeholder="예: 11.9">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">⏱️ 떠오른 시간(초)</label>
-                                <input type="number" step="0.01" min="0" id="time-tubeC" value="${r.tubeC || ''}" onchange="updateRealTime('tubeC', this.value)" class="w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 font-mono outline-indigo-500" placeholder="기록(수동입력)">
-                            </div>
-                        </div>
-
-                        <button onclick="openTimerHelper('tubeC')" class="mt-3 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] rounded-lg transition flex items-center justify-center space-x-1">
-                            <i class="fa-solid fa-stopwatch"></i><span>타이머 자동 측정</span>
-                        </button>
-                    </div>
-
-                </div>
-
-                <!-- Active Floating Stopwatch Helper UI (Shown dynamically on demand) -->
-                <div id="stopwatch-modal-container" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-8 text-center shadow-inner">
-                    <h4 class="text-xs font-black text-slate-700 mb-2 flex items-center justify-center space-x-1">
-                        <i class="fa-solid fa-stopwatch text-indigo-500 animate-pulse"></i>
-                        <span id="target-timer-title">시험관 타이머 보조</span>
-                    </h4>
-                    
-                    <div id="stopwatch-display-panel" class="text-4xl font-mono font-extrabold text-slate-800 my-4 tracking-widest">
-                        0.00 <span class="text-xs font-sans text-slate-400">초</span>
-                    </div>
-
-                    <div class="flex justify-center space-x-2">
-                        <button onclick="controlTimerState()" id="btn-timer-trigger" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition">시작</button>
-                        <button onclick="resetActiveTimer()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold text-xs rounded-xl transition">초기화</button>
-                        <button onclick="closeTimerHelper()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition">기록 저장 후 닫기</button>
-                    </div>
-                </div>
-
-                <!-- Back / Next Navs -->
-                <div class="flex justify-between items-center border-t border-slate-100 pt-6">
-                    <button onclick="navigateTo('step2')" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>이전으로
-                    </button>
-                    <button onclick="validateAndGoToGraph()" class="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl text-sm shadow-md transition">
-                        결과 해석 및 속도 그래프 보기 <i class="fa-solid fa-arrow-right ml-2"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    // Handlers for parameters changes
-    function updateRealPH(tube, val) {
-        if (val === '') return;
-        window.appState.design.tubes[tube].ph = parseFloat(val);
-    }
-
-    function updateRealTime(tube, val) {
-        if (val === '') {
-            window.appState.results[tube] = null;
-        } else {
-            window.appState.results[tube] = parseFloat(val);
-        }
-    }
-
-    function openTimerHelper(tube) {
-        activeTargetTube = tube;
-        const tubeKorean = tube === 'tubeA' ? 'A (산성)' : tube === 'tubeB' ? 'B (중성)' : 'C (염기성)';
-        
-        document.getElementById('stopwatch-modal-container').classList.remove('hidden');
-        document.getElementById('target-timer-title').textContent = `시험관 ${tubeKorean} 타이머 보조 측정도구`;
-        
-        // Reset and update display to previous result if any
-        resetActiveTimer();
-        const existingVal = window.appState.results[tube];
-        if (existingVal) {
-            timerElapsedTime = existingVal * 1000;
-            document.getElementById('stopwatch-display-panel').innerHTML = `${existingVal.toFixed(2)} <span class="text-xs font-sans text-slate-400">초</span>`;
-        }
-    }
-
-    function controlTimerState() {
-        const btn = document.getElementById('btn-timer-trigger');
-        if (activeTimer) {
-            // Stop logic
-            clearInterval(activeTimer);
-            activeTimer = null;
-            btn.textContent = "계속";
-            btn.classList.replace('bg-red-500', 'bg-indigo-600');
-            
-            // Auto write to time input field and store
-            const finalSec = parseFloat((timerElapsedTime / 1000).toFixed(2));
-            window.appState.results[activeTargetTube] = finalSec;
-            
-            const field = document.getElementById(`time-${activeTargetTube}`);
-            if (field) field.value = finalSec;
-        } else {
-            // Start logic
-            timerStartTime = Date.now() - timerElapsedTime;
-            activeTimer = setInterval(() => {
-                timerElapsedTime = Date.now() - timerStartTime;
-                document.getElementById('stopwatch-display-panel').innerHTML = `${(timerElapsedTime / 1000).toFixed(2)} <span class="text-xs font-sans text-slate-400">초</span>`;
-            }, 30);
-            btn.textContent = "정지";
-            btn.className = "px-5 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-xs rounded-xl shadow transition";
-        }
-    }
-
-    function resetActiveTimer() {
-        if (activeTimer) {
-            clearInterval(activeTimer);
-            activeTimer = null;
-        }
-        timerElapsedTime = 0;
-        document.getElementById('stopwatch-display-panel').innerHTML = `0.00 <span class="text-xs font-sans text-slate-400">초</span>`;
-        const btn = document.getElementById('btn-timer-trigger');
-        if (btn) {
-            btn.textContent = "시작";
-            btn.className = "px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition";
-        }
-    }
-
-    function closeTimerHelper() {
-        if (activeTimer) {
-            clearInterval(activeTimer);
-            activeTimer = null;
-        }
-        // Finalize results and write
-        const finalSec = parseFloat((timerElapsedTime / 1000).toFixed(2));
-        if (finalSec > 0) {
-            window.appState.results[activeTargetTube] = finalSec;
-            const field = document.getElementById(`time-${activeTargetTube}`);
-            if (field) field.value = finalSec;
-        }
-        document.getElementById('stopwatch-modal-container').classList.add('hidden');
-        activeTargetTube = null;
-    }
-
-    function validateAndGoToGraph() {
-        const r = window.appState.results;
-        const d = window.appState.design;
-
-        const allTimesWritten = r.tubeA !== null && r.tubeB !== null && r.tubeC !== null;
-        const allPHWritten = d.tubes.tubeA.ph !== null && d.tubes.tubeB.ph !== null && d.tubes.tubeC.ph !== null;
-
-        if (!allTimesWritten || !allPHWritten) {
-            showModal("⚠️ 기록 완료 필요", "모든 시험관의 실제 pH와 측정한 소요시간(초) 데이터가 빠짐없이 입력되어야 정확한 반응 속도 그래프가 완성됩니다.");
-            return;
-        }
-
-        navigateTo('step4');
-    }
-</script>
-
-<script>
-    let rateChartObj = null;
-
-    function renderGraphScreen(container) {
-        const r = window.appState.results;
-        const d = window.appState.design;
-        const a = window.appState.analysis;
-
-        // Mathematical conversion to 1/t (Reaction rate indicator)
-        const rateA = r.tubeA > 0 ? parseFloat((1 / r.tubeA).toFixed(4)) : 0;
-        const rateB = r.tubeB > 0 ? parseFloat((1 / r.tubeB).toFixed(4)) : 0;
-        const rateC = r.tubeC > 0 ? parseFloat((1 / r.tubeC).toFixed(4)) : 0;
-
-        container.innerHTML = `
-            <div class="max-w-3xl mx-auto">
-                <div class="mb-6">
-                    <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-chart-line"></i> 4단계: 결과 해석 및 속도 분석</span>
-                    <h2 class="text-xl md:text-2xl font-black text-slate-800 mt-2">반응 시간의 역수($1/t$)가 그린 반응 속도 그래프</h2>
-                    <p class="text-sm text-slate-500 mt-1">우리 모둠이 입력한 실측 pH 값과 거름종이가 떠오르는 데 걸린 소요 시간의 역수를 기반으로 한 탐구 결과입니다.</p>
-                </div>
-
-                <!-- High School Biology Concept Box -->
-                <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 mb-8 text-xs text-indigo-950 flex items-start space-x-3 leading-relaxed">
-                    <span class="text-lg text-indigo-600"><i class="fa-solid fa-brain"></i></span>
-                    <div>
-                        <strong class="font-bold">📚 [필수 교육 개념] 왜 Y축을 떠오른 시간의 역수($1/\text{시간}$)로 표현하나요?</strong>
-                        <p class="mt-1 opacity-90">
-                            거름종이가 수면 위로 빠르게 완전히 떠올랐다는 것은 효소가 산소 기체($O_2$)를 그만큼 단시간에 활발히 배출했다는 뜻입니다.<br>
-                            즉, <strong>소요 시간($t$)이 짧을수록 효소의 반응 속도($v$)는 기하급수적으로 빠른 것</strong>이므로, 시간의 역수인 <strong>$1/t$가 곧 효소의 반응 속도를 나타내는 과학적이고 직관적인 척도</strong>가 됩니다!
-                        </p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    
-                    <!-- Graph Layout Panel -->
-                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex flex-col justify-between">
-                        <h3 class="text-xs font-bold text-slate-700 mb-3 flex items-center">
-                            <i class="fa-solid fa-chart-bar text-indigo-500 mr-2"></i> 실시간 탐구 분석 속도 차트
-                        </h3>
-                        <div class="flex-1 min-h-[220px] flex items-center justify-center">
-                            <canvas id="canvas-rate-chart"></canvas>
-                        </div>
-                        <div class="text-[10px] text-slate-400 mt-3 text-center">
-                            <span>📌 X축: 실측 pH &nbsp;|&nbsp; Y축: 반응속도 비례값($1/t, s^{-1}$)</span>
-                        </div>
-                    </div>
-
-                    <!-- Analysis Questions Panel -->
-                    <div class="space-y-4">
-                        <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-4">
-                            <h3 class="text-xs font-bold text-slate-800 flex items-center">
-                                <i class="fa-solid fa-user-pen text-indigo-500 mr-2"></i> 데이터 결과 해석 질문
-                            </h3>
-
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-500 mb-2">Q1. 그래프 분석 결과, 반응 속도($1/t$)가 가장 활발하고 뛰어났던 시험관은 무엇인가요?</label>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <button onclick="setAnalysisFastest('tubeA')" id="btn-ana-A" class="p-2 border rounded-xl text-xs font-bold transition ${a.fastest === 'tubeA' ? 'bg-indigo-500 border-indigo-500 text-white shadow' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                        시험관 A (${d.tubes.tubeA.ph})
-                                    </button>
-                                    <button onclick="setAnalysisFastest('tubeB')" id="btn-ana-B" class="p-2 border rounded-xl text-xs font-bold transition ${a.fastest === 'tubeB' ? 'bg-indigo-500 border-indigo-500 text-white shadow' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                        시험관 B (${d.tubes.tubeB.ph})
-                                    </button>
-                                    <button onclick="setAnalysisFastest('tubeC')" id="btn-ana-C" class="p-2 border rounded-xl text-xs font-bold transition ${a.fastest === 'tubeC' ? 'bg-indigo-500 border-indigo-500 text-white shadow' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                        시험관 C (${d.tubes.tubeC.ph})
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-500 mb-2">Q2. 카탈레이스 효소가 해당 pH에서 최대 반응 속도를 보인 과학적인 이유는 무엇인가요?</label>
-                                <select id="sel-ana-reason" onchange="setAnalysisReason(this.value)" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-indigo-500">
-                                    <option value="" ${a.reason === '' ? 'selected' : ''}>-- 핵심 작동 원리를 선택해 주세요 --</option>
-                                    <option value="neutral-active" ${a.reason === 'neutral-active' ? 'selected' : ''}>중성 pH(7 내외)에서 효소 단백질 구조가 상하지 않고 최적 입체를 유지해서</option>
-                                    <option value="acidic-denature" ${a.reason === 'acidic-denature' ? 'selected' : ''}>강한 산성이나 염기성에 노출되었을 때 효소의 활성화 에너지가 훨씬 낮아져서</option>
-                                    <option value="random-error" ${a.reason === 'random-error' ? 'selected' : ''}>pH 농도와 효소 단백질 구조는 서로 어떠한 화학적 영향도 미치지 않아서</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Real-time analysis checker feedback -->
-                        <div id="analysis-feedback-panel" class="hidden p-4 rounded-xl text-xs font-bold"></div>
-                    </div>
-                </div>
-
-                <!-- Screen Navigations -->
-                <div class="flex justify-between items-center border-t border-slate-100 pt-6">
-                    <button onclick="navigateTo('step3')" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>이전으로
-                    </button>
-                    <button onclick="submitVelocityAnalysis()" class="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl text-sm shadow-md transition">
-                        최종 결론 작성하러 가기 <i class="fa-solid fa-arrow-right ml-2"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Render Chart
-        setTimeout(() => {
-            initVelocityChart(d.tubes.tubeA.ph, rateA, d.tubes.tubeB.ph, rateB, d.tubes.tubeC.ph, rateC);
-            checkScientificCorrectnessFeedback();
-        }, 50);
-    }
-
-    function initVelocityChart(phA, rateA, phB, rateB, phC, rateC) {
-        const ctx = document.getElementById('canvas-rate-chart');
-        if (!ctx) return;
-
-        if (rateChartObj) {
-            rateChartObj.destroy();
-        }
-
-        rateChartObj = new Chart(ctx, {
-            type: 'line', // Continuous line represents reaction rate vs pH curves perfectly
-            data: {
-                labels: [`A (pH ${phA})`, `B (pH ${phB})`, `C (pH ${phC})`],
-                datasets: [{
-                    label: '효소 반응 속도 (1/시간, s⁻¹)',
-                    data: [rateA, rateB, rateC],
-                    borderColor: 'rgb(99, 102, 241)',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    borderWidth: 3,
-                    pointBackgroundColor: [
-                        'rgb(239, 68, 68)',
-                        'rgb(16, 185, 129)',
-                        'rgb(59, 130, 246)'
-                    ],
-                    pointRadius: 6,
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: '반응 속도 (1/t)',
-                            font: { size: 10, weight: 'bold' }
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: '실측 시험군 구분',
-                            font: { size: 10, weight: 'bold' }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    function setAnalysisFastest(val) {
-        window.appState.analysis.fastest = val;
-        ['tubeA', 'tubeB', 'tubeC'].forEach(tube => {
-            const btn = document.getElementById(`btn-ana-${tube.slice(-1)}`);
-            if (tube === val) {
-                btn.className = "p-2 border rounded-xl text-xs font-bold transition bg-indigo-500 border-indigo-500 text-white shadow";
-            } else {
-                btn.className = "p-2 border rounded-xl text-xs font-bold transition bg-white border-slate-200 hover:bg-slate-100";
-            }
-        });
-        checkScientificCorrectnessFeedback();
-    }
-
-    function setAnalysisReason(val) {
-        window.appState.analysis.reason = val;
-        checkScientificCorrectnessFeedback();
-    }
-
-    // Auto grading system for feedback
-    function checkScientificCorrectnessFeedback() {
-        const a = window.appState.analysis;
-        const panel = document.getElementById('analysis-feedback-panel');
-        if (!panel) return;
-
-        if (!a.fastest || !a.reason) {
-            panel.classList.add('hidden');
-            return;
-        }
-
-        panel.classList.remove('hidden');
-        if (a.fastest === 'tubeB' && a.reason === 'neutral-active') {
-            panel.className = "p-4 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-100 font-bold fade-in";
-            panel.innerHTML = `🌟 대단합니다! 실측 데이터를 완벽하게 분석했습니다. 카탈레이스는 중성 조건(pH 7 내외)에서 최적 활성을 가집니다.`;
-        } else {
-            panel.className = "p-4 rounded-xl text-xs bg-amber-50 text-amber-900 border border-amber-200 font-medium leading-relaxed fade-in animate-pulse";
-            panel.innerHTML = `💡 <strong>한번 더 확인해 볼까요?</strong> 일반적으로 생체 효소인 카탈레이스는 산이나 염기에서 변성되므로 중성(B)인 최적 pH 환경에서 $1/t$(반응속도) 값이 극대화됩니다. 고른 정답이 과학적 지식과 맞는지 다시 검토해보세요.`;
-        }
-    }
-
-    function submitVelocityAnalysis() {
-        const a = window.appState.analysis;
-        if (!a.fastest || !a.reason) {
-            showModal("⚠️ 작성 미완료", "결과 해석 질문 2가지에 모두 답해주셔야 탐구 보고서 제출 전 단계로 넘어갈 수 있습니다.");
-            return;
-        }
-        navigateTo('step5');
-    }
-</script>
-
-<script>
-    function renderConclusionScreen(container) {
-        const h = window.appState.hypothesis;
-        const c = window.appState.conclusion;
-
-        container.innerHTML = `
-            <div class="max-w-2xl mx-auto">
-                <div class="mb-6">
-                    <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-flag-checkered"></i> 5단계: 최종 탐구 결론 도출</span>
-                    <h2 class="text-xl md:text-2xl font-black text-slate-800 mt-2">탐구 결과를 가설과 일치시키고 마무리합시다</h2>
-                    <p class="text-sm text-slate-500 mt-1">우리 모둠이 맨 처음 설정했던 가설의 진위를 확인하고 최적의 과학 요약을 채택하여 보고서를 제출해 주세요.</p>
-                </div>
-
-                <!-- Final evaluation boxes -->
-                <div class="bg-slate-50 border border-slate-100 rounded-2xl p-6 mb-8 space-y-5">
-                    
-                    <!-- Display Initial Hypothesis for comparative check -->
-                    <div>
-                        <span class="block text-[11px] font-bold text-slate-400 mb-2">1단계에서 우리 모둠이 세운 최초 가설:</span>
-                        <div class="p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-sm leading-relaxed">
-                            " 카탈레이스 효소는 ${getKoreanCond(h.condition)} 환경일 때, 반응 속도가 ${getKoreanRes(h.result)} "
-                        </div>
-                    </div>
-
-                    <!-- Hypothesis agreement buttons -->
-                    <div>
-                        <span class="block text-[11px] font-bold text-slate-500 mb-2">Q1. 실제 실험 데이터를 해석한 결과, 최초의 가설과 일치합니까?</span>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="setConclusionMatches('yes')" id="btn-match-yes" class="p-3 border rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${c.matches === 'yes' ? 'bg-indigo-500 border-indigo-500 text-white shadow' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                <i class="fa-regular fa-thumbs-up"></i><span>예 (가설 일치 및 지지)</span>
-                            </button>
-                            <button onclick="setConclusionMatches('no')" id="btn-match-no" class="p-3 border rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${c.matches === 'no' ? 'bg-indigo-500 border-indigo-500 text-white shadow' : 'bg-white border-slate-200 hover:bg-slate-100'}">
-                                <i class="fa-regular fa-thumbs-down"></i><span>아니오 (가설이 옳지 않음)</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Core summary dropdown -->
-                    <div>
-                        <span class="block text-[11px] font-bold text-slate-500 mb-2">Q2. 이번 탐구 실험 전체 과정을 요약하는 완벽한 과학적 진술을 골라주세요.</span>
-                        <select id="sel-con-summary" onchange="setConclusionSummary(this.value)" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-indigo-500">
-                            <option value="" ${c.summary === '' ? 'selected' : ''}>-- 탐구 핵심 결론 문구 선택 --</option>
-                            <option value="best-neutral" ${c.summary === 'best-neutral' ? 'selected' : ''}>단백질 구조인 카탈레이스 효소는 중성(pH 7 내외)에서 최적 활성을 가지며 강산, 강염기에서는 단백질 입체가 변성되어 활성을 거의 잃는다.</option>
-                            <option value="equal" ${c.summary === 'equal' ? 'selected' : ''}>pH 환경은 화학 반응 활성화 에너지에 무관하며, 생물 세포 내 카탈레이스는 산성과 염기성 조건에서 모두 동일 속도로 촉매한다.</option>
-                        </select>
-                    </div>
-
-                </div>
-
-                <!-- Back and Submit Report buttons -->
-                <div class="flex justify-between items-center">
-                    <button onclick="navigateTo('step4')" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>이전으로
-                    </button>
-                    <button onclick="finalSubmitReport()" class="px-7 py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-black rounded-2xl text-md shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center space-x-2">
-                        <i class="fa-solid fa-cloud-arrow-up"></i><span>학습 결과 최종 제출하기</span>
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    function setConclusionMatches(val) {
-        window.appState.conclusion.matches = val;
-        ['yes', 'no'].forEach(m => {
-            const btn = document.getElementById(`btn-match-${m}`);
-            if (m === val) {
-                btn.className = "p-3 border rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 bg-indigo-500 border-indigo-500 text-white shadow";
-            } else {
-                btn.className = "p-3 border rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 bg-white border-slate-200 hover:bg-slate-100";
-            }
-        });
-    }
-
-    function setConclusionSummary(val) {
-        window.appState.conclusion.summary = val;
-    }
-
-    function finalSubmitReport() {
-        const c = window.appState.conclusion;
-        if (!c.matches || !c.summary) {
-            showModal("⚠️ 결론 미완료", "가설 검증과 요약 진술을 끝까지 마무리해야 최종 제출이 성립됩니다.");
-            return;
-        }
-
-        showModal(
-            "📝 탐구 결과지 최종 제출",
-            "지금 최종 제출하면 실시간 교사용 모니터링 허브에 전송 및 완료 등록되어 선생님이 채점할 수 있습니다. 제출할까요?",
-            async () => {
-                window.appState.submitted = true;
-                window.appState.currentStep = 'complete';
-                if (window.saveProgress) {
-                    await window.saveProgress();
-                }
-                updateUI();
-            },
-            () => { console.log('Final submission cancelled'); }
-        );
-    }
-</script>
-
-<script>
-    function renderCompleteScreen(container) {
-        const s = window.appState.studentInfo;
-        const r = window.appState.results;
-
-        container.innerHTML = `
-            <div class="max-w-md mx-auto py-8 text-center space-y-6">
-                <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-4xl shadow-inner mx-auto">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-                
                 <div>
-                    <h2 class="text-2xl font-black text-slate-800">탐구 학습 보고서 전송 완료!</h2>
-                    <p class="text-sm text-slate-500 mt-2">
-                        <strong>${s.grade}학년 ${s.classNum}반 ${s.studentNum}번 ${s.name}</strong> 학생의 탐구 기록이 교사용 허브로 실시간 수집되었습니다.
-                    </p>
-                </div>
-
-                <!-- Personal summary storage card -->
-                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 text-left space-y-3">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">우리 모둠이 수집한 실측 결과(초)</h3>
-                    <div class="flex justify-between text-xs text-slate-600">
-                        <span>A 산성 시험관 (pH ${window.appState.design.tubes.tubeA.ph}):</span>
-                        <strong class="font-mono text-slate-800">${r.tubeA} 초 (속도: ${(1/r.tubeA).toFixed(3)})</strong>
-                    </div>
-                    <div class="flex justify-between text-xs text-slate-600">
-                        <span>B 중성 시험관 (pH ${window.appState.design.tubes.tubeB.ph}):</span>
-                        <strong class="font-mono text-slate-800">${r.tubeB} 초 (속도: ${(1/r.tubeB).toFixed(3)})</strong>
-                    </div>
-                    <div class="flex justify-between text-xs text-slate-600">
-                        <span>C 염기성 시험관 (pH ${window.appState.design.tubes.tubeC.ph}):</span>
-                        <strong class="font-mono text-slate-800">${r.tubeC} 초 (속도: ${(1/r.tubeC).toFixed(3)})</strong>
-                    </div>
-                    <div class="border-t border-slate-200 pt-2 text-[10px] text-indigo-600 font-bold">
-                        💡 실시간으로 수집되는 전체 학급 데이터와 비교 피드백은 선생님 화면을 봐주시기 바랍니다.
-                    </div>
-                </div>
-
-                <div class="pt-4 flex flex-col gap-2">
-                    <button onclick="restartLabProcess()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
-                        결과 수정 혹은 실험 리셋하기
-                    </button>
+                    <h1 class="text-2xl font-bold tracking-tight text-slate-900">🔬 카탈레이스 효소 반응 속도 탐구</h1>
+                    <p class="text-sm text-slate-500 mt-0.5">실제 탐구 기록 및 과학적 결과 그래프 시각화 활동지</p>
                 </div>
             </div>
-        `;
-    }
+            <button onclick="toggleDashboard()" id="dashBtn" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-800 transition shadow-sm flex items-center gap-2">
+                <i class="fa-solid fa-chalkboard-user"></i> 교사 대시보드로 이동
+            </button>
+        </header>
 
-    function restartLabProcess() {
-        showModal(
-            "실험 초기화 경고",
-            "기록했던 변인 설정과 타이머 시간이 모두 제거되고 초기 단계로 돌아갑니다. 다시 시작하시겠습니까?",
-            () => {
-                window.appState.currentStep = 'intro';
-                window.appState.submitted = false;
-                window.appState.hypothesis = { condition: '', result: '' };
-                window.appState.design = {
-                    independent: null,
-                    dependent: null,
-                    controlled: [],
-                    tubes: {
-                        tubeA: { chemical: 'acidic', ph: 2.0 },
-                        tubeB: { chemical: 'neutral', ph: 7.0 },
-                        tubeC: { chemical: 'basic', ph: 12.0 }
-                    }
-                };
-                window.appState.results = { tubeA: null, tubeB: null, tubeC: null };
-                window.appState.analysis = { fastest: '', reason: '' };
-                window.appState.conclusion = { matches: '', summary: '' };
-                
-                if (window.saveProgress) {
-                    window.saveProgress();
-                }
-                updateUI();
-            }
-        );
-    }
-</script>
+        <!-- 인디케이터 (단계 표시 바) -->
+        <nav class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 overflow-x-auto">
+            <div class="flex justify-between items-center min-w-[600px] px-4">
+                <div class="flex items-center gap-2 step-indicator" id="ind-1"><span class="w-8 h-8 rounded-full flex items-center justify-center font-bold step-active">1</span> <span class="text-sm font-semibold">시작하기</span></div>
+                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
+                <div class="flex items-center gap-2 step-indicator" id="ind-2"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">2</span> <span class="text-sm font-medium text-slate-400">가설 설정</span></div>
+                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
+                <div class="flex items-center gap-2 step-indicator" id="ind-3"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">3</span> <span class="text-sm font-medium text-slate-400">실험 설계</span></div>
+                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
+                <div class="flex items-center gap-2 step-indicator" id="ind-4"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">4</span> <span class="text-sm font-medium text-slate-400">결과 기록</span></div>
+                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
+                <div class="flex items-center gap-2 step-indicator" id="ind-5"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">5</span> <span class="text-sm font-medium text-slate-400">속도 해석</span></div>
+                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
+                <div class="flex items-center gap-2 step-indicator" id="ind-6"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">6</span> <span class="text-sm font-medium text-slate-400">결론 & 제출</span></div>
+            </div>
+        </nav>
 
-<script>
-    let teacherGraphObj = null;
+        <!-- 메인 콘텐츠 영역 -->
+        <main id="main-card" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 min-h-[450px] flex flex-col justify-between">
+            <!-- 내부 콘텐츠는 JavaScript가 동적으로 생성합니다. -->
+        </main>
+    </div>
 
-    function renderTeacherDashboard() {
-        const main = document.getElementById('main-content');
-        main.className = "bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 min-h-[400px] fade-in";
-
-        const submissions = window.appState.allSubmissions || [];
-        const totalJoined = submissions.length;
-        const totalSubmitted = submissions.filter(s => s.submitted).length;
-
-        // Calculate class average reaction speed reciprocal (1/t)
-        let sumA = 0, sumB = 0, sumC = 0;
-        let countA = 0, countB = 0, countC = 0;
-
-        submissions.forEach(sub => {
-            if (sub.results) {
-                if (sub.results.tubeA > 0) { sumA += (1 / sub.results.tubeA); countA++; }
-                if (sub.results.tubeB > 0) { sumB += (1 / sub.results.tubeB); countB++; }
-                if (sub.results.tubeC > 0) { sumC += (1 / sub.results.tubeC); countC++; }
-            }
-        });
-
-        const avgA = countA > 0 ? (sumA / countA).toFixed(4) : 0;
-        const avgB = countB > 0 ? (sumB / countB).toFixed(4) : 0;
-        const avgC = countC > 0 ? (sumC / countC).toFixed(4) : 0;
-
-        main.innerHTML = `
-            <div>
-                <!-- Top Status Banner -->
-                <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-5 gap-4">
-                    <div>
-                        <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-chart-line"></i> 교사용 실시간 분석 허브</span>
-                        <h2 class="text-2xl font-black text-slate-800 mt-1">🔬 실험 실시간 모니터링 대시보드</h2>
-                        <p class="text-xs text-slate-400 mt-1">학급 갤럭시 탭(디벗) 데이터가 끊김 없이 실시간으로 연동되는 화면입니다.</p>
+    <!-- 교사 대시보드 모달 -->
+    <div id="dashModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[85vh] overflow-y-auto p-8 shadow-xl border border-slate-100">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-chart-pie text-emerald-500"></i> 실시간 교사 모니터링 허브</h2>
+                <button onclick="toggleDashboard()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="authZone" class="py-12 text-center">
+                <p class="text-slate-600 mb-4 font-medium">교사용 비밀번호를 입력하세요.</p>
+                <div class="flex justify-center gap-2 max-w-xs mx-auto">
+                    <input type="password" id="dashPw" class="border rounded-xl px-4 py-2 w-full focus:outline-emerald-500" placeholder="비밀번호">
+                    <button onclick="checkPw()" class="bg-emerald-500 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-600 transition">확인</button>
+                </div>
+            </div>
+            <div id="dashContent" class="hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-2xl border text-center">
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">총 참여 학생</p>
+                        <p class="text-3xl font-bold mt-1 text-slate-900" id="stat-total">0명</p>
                     </div>
-                    
-                    <div class="flex items-center space-x-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <div class="text-center px-4 border-r border-slate-200">
-                            <span class="block text-[10px] text-slate-400 font-bold">전체 참여 모둠/개인</span>
-                            <strong class="text-lg font-black text-slate-700">${totalJoined}명</strong>
-                        </div>
-                        <div class="text-center px-2">
-                            <span class="block text-[10px] text-slate-400 font-bold">보고서 최종 제출</span>
-                            <strong class="text-lg font-black text-indigo-600">${totalSubmitted}명</strong>
-                        </div>
+                    <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
+                        <p class="text-xs text-emerald-600 font-bold uppercase tracking-wider">최종 제출 완료</p>
+                        <p class="text-3xl font-bold mt-1 text-emerald-700" id="stat-submit">0명</p>
+                    </div>
+                    <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-center">
+                        <p class="text-xs text-amber-600 font-bold uppercase tracking-wider">실험 설계 통과율</p>
+                        <p class="text-3xl font-bold mt-1 text-amber-700">100%</p>
                     </div>
                 </div>
-
-                <!-- Statistics layout -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    
-                    <!-- Class average line graph -->
-                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex flex-col justify-between">
-                        <h3 class="text-xs font-bold text-slate-500 mb-4 uppercase tracking-wider">📊 학급 전체 실시간 평균 효소 반응 속도 ($1/t$)</h3>
-                        <div class="flex-1 min-h-[220px] flex items-center justify-center">
-                            <canvas id="canvas-teacher-stats"></canvas>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center mt-3 pt-3 border-t border-slate-200 text-xs">
-                            <div>
-                                <span class="text-[10px] text-slate-400">평균 A (산성)</span>
-                                <strong class="block text-red-500 font-mono">${avgA}</strong>
-                            </div>
-                            <div>
-                                <span class="text-[10px] text-slate-400">평균 B (중성)</span>
-                                <strong class="block text-emerald-500 font-mono">${avgB}</strong>
-                            </div>
-                            <div>
-                                <span class="text-[10px] text-slate-400">평균 C (염기성)</span>
-                                <strong class="block text-blue-500 font-mono">${avgC}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Teacher quick helper cards -->
-                    <div class="space-y-4">
-                        <div class="p-5 bg-indigo-50 text-indigo-950 rounded-2xl border border-indigo-100">
-                            <h4 class="text-xs font-bold mb-2 flex items-center"><i class="fa-solid fa-chalkboard-user mr-1.5"></i> 모둠 피드백 교사 안내 가이드</h4>
-                            <ul class="list-disc list-inside space-y-2 text-[11px] leading-relaxed opacity-95">
-                                <li>학생들의 오프라인 탐구 결과 데이터가 실시간으로 수집되는 화면입니다.</li>
-                                <li><strong>반응 속도($1/t$)</strong>는 높을수록 촉매 작용이 활발함을 나타내며, 대조군인 중성(B)이 가장 높게 형성되어야 완벽한 과학적 검증이 이루어진 것입니다.</li>
-                                <li>변인 분류 설계 단계에서 어려움을 겪고 있는지 실시간 진척 수준표를 통해 확인하고 현장 개별 지도를 수행해주세요.</li>
-                            </ul>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                                <span class="text-[10px] text-slate-400 font-bold block">대조군(B) 반응 최고점 달성율</span>
-                                <strong class="text-md text-emerald-800 block mt-1">실시간 자동 분석 중</strong>
-                            </div>
-                            <div class="p-4 bg-amber-50/50 rounded-xl border border-amber-100">
-                                <span class="text-[10px] text-slate-400 font-bold block">기기 환경 상태</span>
-                                <strong class="text-md text-amber-800 block mt-1">갤럭시 탭(디벗) 전용</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Students real-time detailed list -->
-                <div class="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="bg-slate-50 px-5 py-4 border-b border-slate-100">
-                        <h3 class="text-sm font-bold text-slate-700">📋 개별 학생 탐구 성취 상태</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs border-collapse">
+                <div>
+                    <h3 class="font-bold text-slate-800 mb-3"><i class="fa-solid fa-list-check mr-1 text-slate-500"></i> 학생별 탐구 진행 현황</h3>
+                    <div class="overflow-x-auto border rounded-2xl bg-white">
+                        <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-slate-100/60 border-b border-slate-100 text-slate-500 uppercase font-semibold">
-                                    <th class="p-4">학년 반 번호 이름</th>
-                                    <th class="p-4">현재 위치</th>
-                                    <th class="p-4">A(산성) 속도</th>
-                                    <th class="p-4">B(중성) 속도</th>
-                                    <th class="p-4">C(염기성) 속도</th>
-                                    <th class="p-4">진행 현황</th>
-                                    <th class="p-4 text-center">보고서 상세 검토</th>
+                                <tr class="bg-slate-50 border-b text-slate-600 text-xs font-bold uppercase">
+                                    <th class="p-4">학번/이름</th>
+                                    <th class="p-4">현재 단계</th>
+                                    <th class="p-4">설정 pH값 (A / B / C)</th>
+                                    <th class="p-4">제출 여부</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${submissions.length === 0 ? `
-                                    <tr>
-                                        <td colspan="7" class="p-8 text-center text-slate-400 font-medium">현재 접속해서 실험 기록을 생성 중인 학생이 없습니다.</td>
-                                    </tr>
-                                ` : submissions.map(sub => {
-                                    const s = sub.studentInfo || { name: '익명', grade: '', classNum: '', studentNum: '' };
-                                    const stepName = getStepNameKOR(sub.currentStep);
-                                    const results = sub.results || { tubeA: null, tubeB: null, tubeC: null };
-                                    
-                                    const vA = results.tubeA > 0 ? (1 / results.tubeA).toFixed(3) : '-';
-                                    const vB = results.tubeB > 0 ? (1 / results.tubeB).toFixed(3) : '-';
-                                    const vC = results.tubeC > 0 ? (1 / results.tubeC).toFixed(3) : '-';
-
-                                    return `
-                                        <tr class="hover:bg-slate-50 transition">
-                                            <td class="p-4 font-bold text-slate-800">${s.grade}학년 ${s.classNum}반 ${s.studentNum}번 ${s.name}</td>
-                                            <td class="p-4 font-semibold text-slate-600">${stepName}</td>
-                                            <td class="p-4 font-mono font-bold text-red-500">${vA} (실측 pH: ${sub.design?.tubes?.tubeA?.ph || '-'})</td>
-                                            <td class="p-4 font-mono font-bold text-emerald-500">${vB} (실측 pH: ${sub.design?.tubes?.tubeB?.ph || '-'})</td>
-                                            <td class="p-4 font-mono font-bold text-blue-500">${vC} (실측 pH: ${sub.design?.tubes?.tubeC?.ph || '-'})</td>
-                                            <td class="p-4">
-                                                <span class="px-2 py-1 rounded-full text-[9px] font-bold ${sub.submitted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                                    ${sub.submitted ? '보고서 제출완료' : '작성 기록중'}
-                                                </span>
-                                            </td>
-                                            <td class="p-4 text-center">
-                                                <button onclick="showStudentDetailModal('${sub.userId}')" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg transition text-[10px]">
-                                                    가설/변인 검토
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join('')}
+                            <tbody id="dashTableBody" class="text-sm divide-y">
+                                <!-- 학생 데이터 행 -->
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-        `;
+        </div>
+    </div>
 
-        // Render teacher average chart
-        setTimeout(() => {
-            initTeacherStatsChart(avgA, avgB, avgC);
-        }, 50);
-    }
-
-    function getStepNameKOR(step) {
-        switch(step) {
-            case 'intro': return '1단계: 개인 식별';
-            case 'step1': return '2단계: 가설 구상';
-            case 'step2': return '3단계: 변인 매칭';
-            case 'step3': return '4단계: 결과 기록';
-            case 'step4': return '5단계: 속도 해석';
-            case 'step5': return '6단계: 결론 도출';
-            case 'complete': return '🎉 최종 제출 완료';
-            default: return '진행 중';
-        }
-    }
-
-    // Teacher Dashboard Class Average Chart JS (1/t vs pH)
-    function initTeacherStatsChart(avgA, avgB, avgC) {
-        const ctx = document.getElementById('canvas-teacher-stats');
-        if (!ctx) return;
-
-        if (teacherGraphObj) {
-            teacherGraphObj.destroy();
-        }
-
-        teacherGraphObj = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['A (산성 평균)', 'B (중성 평균)', 'C (염기성 평균)'],
-                datasets: [{
-                    label: '학급 평균 속도 (1/t, s⁻¹)',
-                    data: [avgA, avgB, avgC],
-                    backgroundColor: [
-                        'rgba(239, 68, 68, 0.6)',
-                        'rgba(16, 185, 129, 0.6)',
-                        'rgba(59, 130, 246, 0.6)'
-                    ],
-                    borderColor: [
-                        'rgb(239, 68, 68)',
-                        'rgb(16, 185, 129)',
-                        'rgb(59, 130, 246)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
+    <script>
+        // 학생 데이터 상태 관리
+        let studentData = {
+            name: '', currentStep: 1,
+            hypothesis: '',
+            variables: { independent: '', dependent: '', controlled: [] },
+            expData: {
+                a: { ph: '', time: '' },
+                b: { ph: '', time: '' },
+                c: { ph: '', time: '' }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: '평균 반응속도 (1/t)' }
-                    }
+            conclusion: '', isSubmitted: false
+        };
+
+        const totalSteps = 6;
+        let myChart = null;
+
+        // 변인 선택지 풀
+        const variableOptions = [
+            { id: 'v1', text: '용액의 pH (산성, 중성, 염기성)', type: 'ind' },
+            { id: 'v2', text: '거름종이가 수면으로 떠오르는 시간', type: 'dep' },
+            { id: 'v3', text: '카탈레이스(감자즙)의 농도 및 양', type: 'con' },
+            { id: 'v4', text: '과산화수소수의 부피 및 농도', type: 'con' },
+            { id: 'v5', text: '실험 장소의 전체 온도', type: 'con' }
+        ];
+        let selectedVariableIds = { independent: null, dependent: null, controlled: [] };
+
+        window.onload = function() {
+            try {
+                const saved = localStorage.getItem('enzyme_student_data');
+                if(saved) {
+                    studentData = JSON.parse(saved);
+                }
+            } catch(e) {
+                console.error("데이터 로드 실패, 초기화합니다.", e);
+            }
+            renderStep();
+        };
+
+        function saveData() {
+            try {
+                localStorage.setItem('enzyme_student_data', JSON.stringify(studentData));
+            } catch(e) {
+                console.error("데이터 저장 실패", e);
+            }
+        }
+
+        function updateIndicators() {
+            for(let i=1; i<=totalSteps; i++) {
+                const ind = document.getElementById(`ind-${i}`);
+                if(!ind) continue;
+                const circle = ind.querySelector('span:first-child');
+                const text = ind.querySelector('span:last-child');
+                if(i === studentData.currentStep) {
+                    circle.className = "w-8 h-8 rounded-full flex items-center justify-center font-bold step-active";
+                    text.className = "text-sm font-semibold text-slate-800";
+                } else if(i < studentData.currentStep) {
+                    circle.className = "w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold";
+                    text.className = "text-sm font-medium text-slate-600";
+                } else {
+                    circle.className = "w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400";
+                    text.className = "text-sm font-medium text-slate-400";
                 }
             }
-        });
-    }
+        }
 
-    // Detailed Report Inspector Modal for Teachers
-    function showStudentDetailModal(userId) {
-        const submissions = window.appState.allSubmissions || [];
-        const studentData = submissions.find(s => s.userId === userId);
-        if (!studentData) return;
+        function nextStep() {
+            if(studentData.currentStep < totalSteps) {
+                studentData.currentStep++;
+                saveData();
+                renderStep();
+            }
+        }
 
-        const info = studentData.studentInfo || {};
-        const hyp = studentData.hypothesis || {};
-        const design = studentData.design || { tubes: { tubeA: {}, tubeB: {}, tubeC: {} } };
-        const results = studentData.results || {};
-        const analysis = studentData.analysis || {};
-        const con = studentData.conclusion || {};
+        function prevStep() {
+            if(studentData.currentStep > 1) {
+                studentData.currentStep--;
+                saveData();
+                renderStep();
+            }
+        }
 
-        const detailHTML = `
-            <div class="space-y-4 text-left text-xs">
-                <div class="border-b border-slate-100 pb-3">
-                    <h4 class="text-md font-bold text-slate-800">${info.grade}학년 ${info.classNum}반 ${info.studentNum}번 ${info.name}</h4>
-                    <p class="text-[10px] text-slate-400 mt-1">업데이트 시각: ${studentData.updatedAt ? new Date(studentData.updatedAt).toLocaleString() : '미기록'}</p>
-                </div>
+        function renderStep() {
+            try {
+                updateIndicators();
+                const main = document.getElementById('main-card');
+                let html = `<div class="flex-1">`;
+                
+                switch(studentData.currentStep) {
+                    case 1:
+                        html += `
+                            <div class="max-w-xl mx-auto text-center py-8">
+                                <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">실험실 안전 및 인적사항</span>
+                                <h2 class="text-2xl font-bold text-slate-900 mt-3 mb-2">실험 활동지 시작하기</h2>
+                                <p class="text-slate-500 text-sm mb-8">모둠원 대표의 학번과 이름을 입력하고 탐구를 시작해 주세요.</p>
+                                <div class="text-left bg-slate-50 p-6 rounded-2xl border border-slate-200/60 mb-6">
+                                    <label class="block text-xs font-bold text-slate-600 uppercase mb-2">학번과 이름 입력</label>
+                                    <input type="text" id="stuName" value="${studentData.name || ''}" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-500 font-medium placeholder-slate-400 shadow-sm" placeholder="예) 20101 홍길동">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end pt-6 border-t mt-6">
+                            <button onclick="saveStep1()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2 shadow-sm">다음 단계로 <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>`;
+                        main.innerHTML = html;
+                        break;
 
-                <div class="space-y-3 max-h-[350px] overflow-y-auto pr-2">
-                    <div class="p-3 bg-slate-50 rounded-xl space-y-1">
-                        <span class="block text-[10px] font-bold text-indigo-500 uppercase">수립한 탐구 가설</span>
-                        <p class="font-bold text-slate-700">"효소는 ${getKoreanCond(hyp.condition)}에서 반응속도가 ${getKoreanRes(hyp.result)}"</p>
-                    </div>
+                    case 2:
+                        html += `
+                            <div class="mb-4">
+                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-lightbulb text-amber-500"></i> [1단계] 탐구 가설 설정하기</h2>
+                                <p class="text-sm text-slate-500 mt-1">실험을 통해 확인하고 싶은 핵심 가설을 문장으로 완성해 봅시다.</p>
+                            </div>
+                            <div class="bg-amber-50/50 border border-amber-200/70 rounded-2xl p-5 my-6">
+                                <h3 class="text-sm font-bold text-amber-800 flex items-center gap-1.5 mb-2"><i class="fa-solid fa-circle-info"></i> 가설 작성 팁</h3>
+                                <p class="text-xs text-amber-700 leading-relaxed">독립변인(pH 환경 변화)과 종속변인(카탈레이스의 효소 반응 속도)이 뚜렷하게 드러나도록 빈칸을 터치하여 알맞은 단어를 선택해 주세요.</p>
+                            </div>
+                            <div class="bg-slate-50 p-6 rounded-2xl border text-center text-base md:text-lg font-medium py-10 text-slate-700">
+                                " 용액의 <span class="font-bold text-indigo-600">pH(산성/중성/염기성) 환경</span>이 변하면, 카탈레이스 효소의 반응 속도(거름종이가 떠오르는 속도)는 
+                                <select id="hypoSelect" class="bg-white border-2 border-indigo-500 rounded-lg px-2 py-1 mx-1 text-slate-900 font-bold focus:outline-none">
+                                    <option value="" ${studentData.hypothesis===''? 'selected':''}>-- 선택 --</option>
+                                    <option value="변할 것이다" ${studentData.hypothesis==='변할 것이다'? 'selected':''}>변할 것이다 (영향이 있을 것이다)</option>
+                                    <option value="일정할 것이다" ${studentData.hypothesis==='일정할 것이다'? 'selected':''}>일정할 것이다 (영향이 없을 것이다)</option>
+                                </select> 
+                                ."
+                            </div>
+                        </div>
+                        <div class="flex justify-between pt-6 border-t mt-6">
+                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
+                            <button onclick="saveStep2()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">다음 단계로 <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>`;
+                        main.innerHTML = html;
+                        break;
 
-                    <div class="p-3 bg-slate-50 rounded-xl space-y-1">
-                        <span class="block text-[10px] font-bold text-indigo-500">독립/종속/통제변인 설계 성취도</span>
-                        <p class="font-semibold text-slate-700">조작(독립)변인: ${design.independent === 'ph' ? '✅ pH 정상매칭' : '❌ 오류'}</p>
-                        <p class="font-semibold text-slate-700">측정(종속)변인: ${design.dependent === 'float-time' ? '✅ 상승시간 정상매칭' : '❌ 오류'}</p>
-                        <p class="font-semibold text-slate-700">통제변인 수: ${design.controlled ? design.controlled.length : 0}개 통제 적용</p>
-                    </div>
+                    case 3:
+                        html += `
+                            <div class="mb-4">
+                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-gears text-indigo-500"></i> [2단계] 변인 설정 및 실험 설계</h2>
+                                <p class="text-sm text-slate-500 mt-1">준비된 요소를 알맞은 변인 칸에 **터치하여** 넣어주세요. 조건이 완성되면 아래에 맞춤형 실험 과정 가이드가 생성됩니다.</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+                                <div class="md:col-span-1 bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
+                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">설정 가능한 변인 카드</h3>
+                                    <div class="space-y-2" id="poolZone"></div>
+                                </div>
+                                <div class="md:col-span-2 space-y-4">
+                                    <div class="p-4 rounded-xl border flex items-center justify-between bg-white" id="slot-ind">
+                                        <div>
+                                            <h4 class="text-sm font-bold text-slate-900"><span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>독립 변인 (조작 변인)</h4>
+                                            <p class="text-xs text-slate-400 mt-0.5">우리가 의도적으로 변화시키는 조건</p>
+                                        </div>
+                                        <div class="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100" id="slot-ind-text">선택 대기 중</div>
+                                    </div>
+                                    <div class="p-4 rounded-xl border flex items-center justify-between bg-white" id="slot-dep">
+                                        <div>
+                                            <h4 class="text-sm font-bold text-slate-900"><span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1.5"></span>종속 변인 (결과 측정)</h4>
+                                            <p class="text-xs text-slate-400 mt-0.5">독립변인에 따라 변해서 측정해야 하는 값</p>
+                                        </div>
+                                        <div class="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-xl border border-red-100" id="slot-dep-text">선택 대기 중</div>
+                                    </div>
+                                    <div class="p-4 rounded-xl border bg-white">
+                                        <h4 class="text-sm font-bold text-slate-900 mb-1"><span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1.5"></span>통제 변인 (일정하게 유지할 조건)</h4>
+                                        <div class="flex flex-wrap gap-2 mt-2" id="slot-con-zone">
+                                            <span class="text-xs text-slate-400 italic">왼쪽에서 통제할 변인 카드를 터치해 추가하세요.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="processGuide" class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-5 hidden">
+                                <h3 class="text-sm font-bold text-indigo-900 mb-2"><i class="fa-solid fa-clipboard-list mr-1"></i> [자동 생성] 우리 조의 실전 실험 가이드</h3>
+                                <ul class="text-xs text-indigo-800 space-y-2 list-disc pl-4 leading-relaxed">
+                                    <li><strong>시험관 준비:</strong> 시험관 3개(A, B, C)를 준비하고 각각 카탈레이스 효소(감자즙 등)를 동일한 양으로 넣습니다.</li>
+                                    <li><strong>조건 설정:</strong> A에는 염산(산성), B에는 증류수(중성), C에는 수산화나트륨(염기성) 용액을 떨어뜨려 pH를 다르게 조작합니다.</li>
+                                    <li><strong>반응 유도:</strong> 각 시험관에 과산화수소수를 넣고, 거름종이를 집게로 집어 바닥까지 가라앉힙니다.</li>
+                                    <li><strong>측정 기준:</strong> 거름종이가 산소 기체 발생으로 인해 <strong>수면 위로 완전히 떠오르는 시간(초)</strong>을 정밀하게 측정하세요.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="flex justify-between pt-6 border-t mt-6">
+                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
+                            <button onclick="saveStep3()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">다음 단계로 <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>`;
+                        main.innerHTML = html;
+                        renderVariables();
+                        break;
 
-                    <div class="p-3 bg-slate-50 rounded-xl space-y-1">
-                        <span class="block text-[10px] font-bold text-indigo-500">실측 수치 분석 (pH 및 소요시간)</span>
-                        <p class="text-red-600 font-semibold">A(산성): 실측 pH ${design.tubes?.tubeA?.ph || '-'} | 시간 ${results.tubeA || '-'}초 | 속도 ${(results.tubeA > 0 ? (1/results.tubeA).toFixed(3) : '-')}</p>
-                        <p class="text-emerald-600 font-semibold">B(중성): 실측 pH ${design.tubes?.tubeB?.ph || '-'} | 시간 ${results.tubeB || '-'}초 | 속도 ${(results.tubeB > 0 ? (1/results.tubeB).toFixed(3) : '-')}</p>
-                        <p class="text-blue-600 font-semibold">C(염기성): 실측 pH ${design.tubes?.tubeC?.ph || '-'} | 시간 ${results.tubeC || '-'}초 | 속도 ${(results.tubeC > 0 ? (1/results.tubeC).toFixed(3) : '-')}</p>
-                    </div>
+                    case 4:
+                        html += `
+                            <div class="mb-4">
+                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-stopwatch text-emerald-500"></i> [3단계] 실제 실험 측정 및 데이터 기록</h2>
+                                <p class="text-sm text-slate-500 mt-1">테이블에서 실제 pH 측정기로 잰 수치와 거름종이가 뜨는 데 걸린 시간(초)을 직접 입력하세요.</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+                                <div class="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <span class="bg-red-50 text-red-600 text-xs font-bold px-2.5 py-1 rounded-lg">시험관 A (산성 환경)</span>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 mb-1">실측 pH (숫자만 입력)</label>
+                                            <input type="number" step="0.1" id="ph-a" value="${studentData.expData.a.ph || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 2.5">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 mb-1">떠오른 시간 (초)</label>
+                                            <input type="number" step="0.1" id="time-a" value="${studentData.expData.a.time || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 45">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <span class="bg-green-50 text-green-600 text-xs font-bold px-2.5 py-1 rounded-lg">시험관 B (중성 환경)</span>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 mb-1">실측 pH (숫자만 입력)</label>
+                                            <input type="number" step="0.1" id="ph-b" value="${studentData.expData.b.ph || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 7.0">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 mb-1">떠오른 시간 (초)</label>
+                                            <input type="number" step="0.1" id="time-b" value="${studentData.expData.b.time || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 8">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <span class="bg-blue-50 text-blue-600 text-xs font-bold px-2.5 py-1 rounded-lg">시험관 C (염기성 환경)</span>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 mb-1">실측 pH (숫자만 입력)</label>
+                                            <input type="number" step="0.1" id="ph-c" value="${studentData.expData.c.ph || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 11.8">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-500 mb-1">떠오른 시간 (초)</label>
+                                            <input type="number" step="0.1" id="time-c" value="${studentData.expData.c.time || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 32">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
+                                <span class="font-medium"><i class="fa-solid fa-stopwatch text-indigo-500 mr-1"></i> 디벗 보조 타이머 (실험 시 활용 가능)</span>
+                                <div class="flex items-center gap-3">
+                                    <span id="stopwatch-display" class="font-mono text-lg font-bold bg-white border px-3 py-1 rounded-lg">00:00.0</span>
+                                    <button onclick="toggleStopwatch()" id="sw-btn" class="bg-indigo-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-indigo-700">시작</button>
+                                    <button onclick="resetStopwatch()" class="bg-slate-200 text-slate-700 px-3 py-1 rounded-lg font-medium hover:bg-slate-300">리셋</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between pt-6 border-t mt-6">
+                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
+                            <button onclick="saveStep4()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">데이터 분석하기 <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>`;
+                        main.innerHTML = html;
+                        break;
 
-                    <div class="p-3 bg-slate-50 rounded-xl space-y-1">
-                        <span class="block text-[10px] font-bold text-indigo-500">결과 해석 및 결론 도출 결과</span>
-                        <p class="font-semibold text-slate-700">속도 최고점 예측 일치도: ${analysis.fastest === 'tubeB' ? '정답 (중성 최대)' : '오류'}</p>
-                        <p class="font-semibold text-slate-700">과학적 변성 이해도: ${analysis.reason === 'neutral-active' ? '정상 이해' : '오개념 존재'}</p>
-                        <p class="font-semibold text-slate-700">가설 검증 진위 여부: ${con.matches === 'yes' ? '합치 판정' : '불일치 판정'}</p>
-                        <p class="font-semibold text-slate-700">최종 요약 선택: ${con.summary === 'best-neutral' ? '합격(효소 pH 최적활성 진술 완료)' : '오진술'}</p>
-                    </div>
-                </div>
-            </div>
-        `;
+                    case 5:
+                        html += `
+                            <div class="mb-4">
+                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-500"></i> [4단계] 데이터 해석 및 그래프 시각화</h2>
+                                <p class="text-sm text-slate-500 mt-1">직접 입력한 데이터가 실시간으로 변환되어 반응 속도 그래프로 표출됩니다.</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6 items-center">
+                                <div class="md:col-span-2 bg-white border p-4 rounded-2xl shadow-sm">
+                                    <canvas id="speedChart" class="w-full max-h-[300px]"></canvas>
+                                </div>
+                                <div class="md:col-span-1 space-y-4">
+                                    <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl text-xs leading-relaxed text-indigo-900">
+                                        <h4 class="font-bold text-sm text-indigo-950 mb-1"><i class="fa-solid fa-calculator"></i> 과학적 원리 안내</h4>
+                                        거름종이가 떠오르는 <strong>시간($t$)의 역수($1/t$)</strong>는 단위 시간당 일어나는 반응량인 <strong>'효소의 반응 속도'</strong>를 나타내게 됩니다. 즉, 역수 값이 클수록 효소가 활발하게 작용하고 있음을 의미합니다!
+                                    </div>
+                                    <div class="border rounded-2xl p-4 bg-slate-50 text-xs space-y-2">
+                                        <h4 class="font-bold text-slate-700">우리 조의 계산된 반응 속도 ($1/t$)</h4>
+                                        <div class="flex justify-between"><span>시험관 A:</span><span class="font-bold" id="calc-a">0</span></div>
+                                        <div class="flex justify-between"><span>시험관 B:</span><span class="font-bold text-emerald-600" id="calc-b">0</span></div>
+                                        <div class="flex justify-between"><span>시험관 C:</span><span class="font-bold" id="calc-c">0</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between pt-6 border-t mt-6">
+                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
+                            <button onclick="nextStep()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">최종 결론 작성 <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>`;
+                        main.innerHTML = html;
+                        setTimeout(initChart, 50);
+                        break;
 
-        showModal(
-            "📝 학생 개별 탐구 성과 검토",
-            detailHTML,
-            () => { console.log('Close detailed inspector'); }
-        );
-    }
-</script>
+                    case 6:
+                        html += `
+                            <div class="mb-4">
+                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-square-check text-emerald-500"></i> [5단계] 결론 도출 및 탐구 활동지 제출</h2>
+                                <p class="text-sm text-slate-500 mt-1">그래프의 경향성을 보고 알게 된 카탈레이스의 최적 pH 조건을 요약하여 최종 제출해 주세요.</p>
+                            </div>
+                            <div class="space-y-4 my-6">
+                                <div class="bg-slate-50 p-5 rounded-2xl border">
+                                    <label class="block text-sm font-bold text-slate-700 mb-2">Q. 실험 결과 분석을 통해 내린 최종 결론을 자유롭게 서술하세요.</label>
+                                    <textarea id="conclusionText" class="w-full border rounded-xl p-4 text-sm focus:outline-emerald-500 min-h-[120px]" placeholder="예) 실험 결과 카탈레이스 효소는 중성 환경(pH 7 부근)인 시험관 B에서 반응속도(1/t)가 가장 높게 나타났다. 따라서 카탈레이스의 최적 pH는 중성 범위임을 알 수 있다.">${studentData.conclusion || ''}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between pt-6 border-t mt-6">
+                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
+                            <button onclick="submitFinal()" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-indigo-700 transition flex items-center gap-2 shadow-md shadow-indigo-100"><i class="fa-solid fa-paper-plane"></i> 서버로 제출하기</button>
+                        </div>`;
+                        main.innerHTML = html;
+                        break;
+                }
+            } catch(e) {
+                console.error("렌더링 오류 발생:", e);
+                document.getElementById('main-card').innerHTML = `<div class="p-4 text-red-500 font-medium">화면을 불러오는 도중 에러가 발생했습니다. 새로고침을 해주세요.</div>`;
+            }
+        }
+
+        function saveStep1() {
+            const input = document.getElementById('stuName');
+            const val = input ? input.value.trim() : "";
+            if(!val) { alert('학번과 이름을 적어주세요.'); return; }
+            studentData.name = val;
+            nextStep();
+        }
+
+        function saveStep2() {
+            const select = document.getElementById('hypoSelect');
+            if(!select || !select.value) { alert('빈칸의 결론 예측을 골라주세요.'); return; }
+            studentData.hypothesis = select.value;
+            nextStep();
+        }
+
+        function renderVariables() {
+            const pool = document.getElementById('poolZone');
+            const indText = document.getElementById('slot-ind-text');
+            const depText = document.getElementById('slot-dep-text');
+            const conZone = document.getElementById('slot-con-zone');
+            const guide = document.getElementById('processGuide');
+
+            if(!pool || !indText || !depText || !conZone) return;
+
+            pool.innerHTML = '';
+            variableOptions.forEach(v => {
+                let isUsed = (selectedVariableIds.independent === v.id || selectedVariableIds.dependent === v.id || selectedVariableIds.controlled.includes(v.id));
+                if(!isUsed) {
+                    pool.innerHTML += `<div onclick="selectVariable('${v.id}')" class="variable-card bg-white border p-2.5 rounded-xl text-xs font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50/30 border-slate-200 shadow-sm">${v.text}</div>`;
+                }
+            });
+
+            if(selectedVariableIds.independent) {
+                const item = variableOptions.find(v => v.id === selectedVariableIds.independent);
+                indText.innerHTML = `${item.text} <i class="fa-solid fa-circle-xmark ml-1.5 text-slate-400 cursor-pointer" onclick="removeVariable('ind')"></i>`;
+                indText.className = "text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200";
+            } else {
+                indText.innerText = '선택 대기 중';
+                indText.className = "text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-dashed";
+            }
+
+            if(selectedVariableIds.dependent) {
+                const item = variableOptions.find(v => v.id === selectedVariableIds.dependent);
+                depText.innerHTML = `${item.text} <i class="fa-solid fa-circle-xmark ml-1.5 text-slate-400 cursor-pointer" onclick="removeVariable('dep')"></i>`;
+                depText.className = "text-xs font-semibold text-red-700 bg-red-50 px-3 py-1.5 rounded-xl border border-red-200";
+            } else {
+                depText.innerText = '선택 대기 중';
+                depText.className = "text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-dashed";
+            }
+
+            if(selectedVariableIds.controlled.length > 0) {
+                conZone.innerHTML = '';
+                selectedVariableIds.controlled.forEach(id => {
+                    const item = variableOptions.find(v => v.id === id);
+                    conZone.innerHTML += `<span class="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">${item.text} <i class="fa-solid fa-circle-xmark text-slate-400 cursor-pointer hover:text-slate-600" onclick="removeConVariable('${id}')"></i></span>`;
+                });
+            } else {
+                conZone.innerHTML = '<span class="text-xs text-slate-400 italic">왼쪽 카드를 터치하여 채워주세요.</span>';
+            }
+
+            if(selectedVariableIds.independent === 'v1' && selectedVariableIds.dependent === 'v2') {
+                guide.classList.remove('hidden');
+                studentData.variables.independent = '용액의 pH 환경';
+                studentData.variables.dependent = '거름종이가 뜨는 시간';
+            } else {
+                guide.classList.add('hidden');
+            }
+        }
+
+        function selectVariable(id) {
+            const item = variableOptions.find(v => v.id === id);
+            if(item.type === 'ind' && !selectedVariableIds.independent) {
+                selectedVariableIds.independent = id;
+            } else if(item.type === 'dep' && !selectedVariableIds.dependent) {
+                selectedVariableIds.dependent = id;
+            } else {
+                if(!selectedVariableIds.controlled.includes(id)) {
+                    selectedVariableIds.controlled.push(id);
+                }
+            }
+            renderVariables();
+        }
+
+        function removeVariable(type) {
+            if(type === 'ind') selectedVariableIds.independent = null;
+            if(type === 'dep') selectedVariableIds.dependent = null;
+            renderVariables();
+        }
+
+        function removeConVariable(id) {
+            selectedVariableIds.controlled = selectedVariableIds.controlled.filter(x => x !== id);
+            renderVariables();
+        }
+
+        function saveStep3() {
+            if(selectedVariableIds.independent !== 'v1' || selectedVariableIds.dependent !== 'v2') {
+                alert('생명과학적 독립변인과 종속변인 배치가 올바르지 않습니다. 다시 검토하세요!');
+                return;
+            }
+            nextStep();
+        }
+
+        function saveStep4() {
+            const phA = document.getElementById('ph-a').value;
+            const tA = document.getElementById('time-a').value;
+            const phB = document.getElementById('ph-b').value;
+            const tB = document.getElementById('time-b').value;
+            const phC = document.getElementById('ph-c').value;
+            const tC = document.getElementById('time-c').value;
+
+            if(!phA || !tA || !phB || !tB || !phC || !tC) {
+                alert('A, B, C 모든 시험관의 측정값(pH 및 시간)을 숫자로 입력해야 넘어갈 수 있습니다.');
+                return;
+            }
+
+            studentData.expData.a = { ph: parseFloat(phA), time: parseFloat(tA) };
+            studentData.expData.b = { ph: parseFloat(phB), time: parseFloat(tB) };
+            studentData.expData.c = { ph: parseFloat(phC), time: parseFloat(tC) };
+            saveData();
+            nextStep();
+        }
+
+        function initChart() {
+            const tA = studentData.expData.a.time;
+            const tB = studentData.expData.b.time;
+            const tC = studentData.expData.c.time;
+
+            const rateA = tA > 0 ? (1 / tA).toFixed(4) : 0;
+            const rateB = tB > 0 ? (1 / tB).toFixed(4) : 0;
+            const rateC = tC > 0 ? (1 / tC).toFixed(4) : 0;
+
+            const elA = document.getElementById('calc-a');
+            const elB = document.getElementById('calc-b');
+            const elC = document.getElementById('calc-c');
+            if(elA) elA.innerText = `${rateA} /s`;
+            if(elB) elB.innerText = `${rateB} /s`;
+            if(elC) elC.innerText = `${rateC} /s`;
+
+            const canvas = document.getElementById('speedChart');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if(myChart) myChart.destroy();
+
+            const dataPoints = [
+                { x: studentData.expData.a.ph, y: parseFloat(rateA) },
+                { x: studentData.expData.b.ph, y: parseFloat(rateB) },
+                { x: studentData.expData.c.ph, y: parseFloat(rateC) }
+            ].sort((a,b) => a.x - b.x);
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: '효소 반응 속도 (1/t)',
+                        data: dataPoints,
+                        backgroundColor: '#6366F1',
+                        borderColor: '#6366F1',
+                        borderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { type: 'linear', title: { display: true, text: '실측 pH', font: { weight: 'bold' } }, min: 0, max: 14 },
+                        y: { title: { display: true, text: '반응 속도 (1/시간)', font: { weight: 'bold' } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function submitFinal() {
+            const area = document.getElementById('conclusionText');
+            const txt = area ? area.value.trim() : "";
+            if(!txt) { alert('최종 결론 분석을 한 문장이라도 작성해 주세요.'); return; }
+            studentData.conclusion = txt;
+            studentData.isSubmitted = true;
+            saveData();
+            alert('🎉 데이터가 성공적으로 서버에 기록되었습니다! 수고하셨습니다.');
+            studentData.currentStep = 1;
+            saveData();
+            renderStep();
+        }
+
+        let timerInterval = null;
+        let startTime = 0;
+        let elapsed = 0;
+        function toggleStopwatch() {
+            const btn = document.getElementById('sw-btn');
+            if(!timerInterval) {
+                startTime = Date.now() - elapsed;
+                timerInterval = setInterval(() => {
+                    elapsed = Date.now() - startTime;
+                    const min = String(Math.floor(elapsed / 60000)).padStart(2, '0');
+                    const sec = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+                    const ms = String(Math.floor((elapsed % 1000) / 100)).padStart(1, '0');
+                    const display = document.getElementById('stopwatch-display');
+                    if(display) display.innerText = `${min}:${sec}.${ms}`;
+                }, 100);
+                if(btn) {
+                    btn.innerText = '정지';
+                    btn.className = 'bg-red-500 text-white px-3 py-1 rounded-lg font-medium hover:bg-red-600';
+                }
+            } else {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                if(btn) {
+                    btn.innerText = '시작';
+                    btn.className = 'bg-indigo-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-indigo-700';
+                }
+            }
+        }
+        function resetStopwatch() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            elapsed = 0;
+            const display = document.getElementById('stopwatch-display');
+            if(display) display.innerText = '00:00.0';
+            const btn = document.getElementById('sw-btn');
+            if(btn) {
+                btn.innerText = '시작';
+                btn.className = 'bg-indigo-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-indigo-700';
+            }
+        }
+
+        function toggleDashboard() {
+            const modal = document.getElementById('dashModal');
+            if(!modal) return;
+            modal.classList.toggle('hidden');
+            if(!modal.classList.contains('hidden')) {
+                document.getElementById('authZone').classList.remove('hidden');
+                document.getElementById('dashContent').classList.add('hidden');
+                document.getElementById('dashPw').value = '';
+            }
+        }
+
+        function checkPw() {
+            const pw = document.getElementById('dashPw').value;
+            if(pw === 'science') {
+                document.getElementById('authZone').classList.add('hidden');
+                document.getElementById('dashContent').classList.remove('hidden');
+                buildDashboardData();
+            } else {
+                alert('비밀번호가 일치하지 않습니다.');
+            }
+        }
+
+        function buildDashboardData() {
+            const tbody = document.getElementById('dashTableBody');
+            const totalEl = document.getElementById('stat-total');
+            const submitEl = document.getElementById('stat-submit');
+
+            const currentStudent = JSON.parse(localStorage.getItem('enzyme_student_data')) || studentData;
+            
+            totalEl.innerText = currentStudent.name ? "1명" : "0명";
+            submitEl.innerText = currentStudent.isSubmitted ? "1명" : "0명";
+
+            if(!currentStudent.name) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">현재 접속 활동 중인 디벗 학생이 없습니다.</td></tr>`;
+                return;
+            }
+
+            const stepNames = ["인적사항 입력", "가설 설정 완료", "실험 설계 완료", "실험 결과 기록 중", "결과 그래프 분석 중", "결론 도출 및 제출 완료"];
+            const curStepName = stepNames[currentStudent.currentStep - 1] || "종료";
+
+            tbody.innerHTML = `
+                <tr class="hover:bg-slate-50/80 transition">
+                    <td class="p-4 font-semibold text-slate-800">${currentStudent.name}</td>
+                    <td class="p-4"><span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-1 rounded-md border border-indigo-100">${curStepName}</span></td>
+                    <td class="p-4 font-mono text-xs text-slate-600">A: ${currentStudent.expData.a.ph || '-'} / B: ${currentStudent.expData.b.ph || '-'} / C: ${currentStudent.expData.c.ph || '-'}</td>
+                    <td class="p-4">${currentStudent.isSubmitted ? '<span class="text-emerald-600 font-bold text-xs"><i class="fa-solid fa-circle-check"></i> 완료됨</span>' : '<span class="text-amber-500 font-medium text-xs"><i class="fa-solid fa-spinner animate-spin"></i> 작성 중</span>'}</td>
+                </tr>
+            `;
+        }
+    </script>
+</body>
+</html>
