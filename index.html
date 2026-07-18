@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>생명과학 실험 활동지 - 카탈레이스 반응 속도</title>
     <!-- Tailwind CSS (UI 디자인용) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome (아이콘용) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js (그래프 시각화용) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js" onerror="window.__chartLoadFailed = true;"></script>
     <style>
         .step-active { background-color: #10B981; color: white; }
         .variable-card { cursor: pointer; transition: all 0.2s; }
         .variable-card:hover { transform: translateY(-2px); }
+
+        /* Tailwind CDN이 차단돼도 첫 화면이 보이도록 하는 최소 안전 스타일 */
+        body { margin: 0; background: #f8fafc; color: #1e293b; font-family: Arial, "Noto Sans KR", sans-serif; }
+        #main-card { background: white; min-height: 450px; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans antialiased text-slate-800 pb-12">
@@ -119,6 +124,58 @@
     </div>
 
     <script>
+        // GitHub Pages/CDN/브라우저 저장 데이터 문제에도 화면이 멈추지 않도록 하는 안전 장치
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function normalizeStudentData(raw) {
+            const base = getInitialState();
+            if (!raw || typeof raw !== 'object') return base;
+
+            const step = Number(raw.currentStep);
+            base.name = typeof raw.name === 'string' ? raw.name : '';
+            base.currentStep = Number.isInteger(step) && step >= 1 && step <= 6 ? step : 1;
+            base.hypothesis = typeof raw.hypothesis === 'string' ? raw.hypothesis : '';
+            base.conclusion = typeof raw.conclusion === 'string' ? raw.conclusion : '';
+            base.isSubmitted = raw.isSubmitted === true;
+
+            if (raw.variables && typeof raw.variables === 'object') {
+                base.variables.independent = typeof raw.variables.independent === 'string' ? raw.variables.independent : '';
+                base.variables.dependent = typeof raw.variables.dependent === 'string' ? raw.variables.dependent : '';
+                base.variables.controlled = Array.isArray(raw.variables.controlled) ? raw.variables.controlled : [];
+            }
+
+            ['a', 'b', 'c'].forEach(key => {
+                const item = raw.expData && raw.expData[key] ? raw.expData[key] : {};
+                base.expData[key] = {
+                    ph: item.ph === '' || item.ph == null ? '' : Number(item.ph),
+                    time: item.time === '' || item.time == null ? '' : Number(item.time)
+                };
+                if (!Number.isFinite(base.expData[key].ph)) base.expData[key].ph = '';
+                if (!Number.isFinite(base.expData[key].time)) base.expData[key].time = '';
+            });
+
+            return base;
+        }
+
+        function showFatalError(error) {
+            console.error('앱 초기화 오류:', error);
+            const main = document.getElementById('main-card');
+            if (!main) return;
+            main.innerHTML = `
+                <div style="padding:32px;text-align:center">
+                    <h2 style="font-size:20px;font-weight:700;margin-bottom:10px">화면을 불러오지 못했습니다.</h2>
+                    <p style="font-size:14px;color:#64748b;margin-bottom:18px">브라우저의 이전 저장 데이터나 외부 라이브러리 로딩 문제일 수 있습니다.</p>
+                    <button onclick="clearAllDataAndReset()" style="border:0;border-radius:10px;padding:11px 16px;background:#f59e0b;color:white;font-weight:700;cursor:pointer">저장 데이터 비우고 다시 시작</button>
+                </div>`;
+        }
+
         // 무결성 기준 기본 상태 정의
         function getInitialState() {
             return {
@@ -150,27 +207,27 @@
         ];
         let selectedVariableIds = { independent: null, dependent: null, controlled: [] };
 
-        // 안전한 페이지 초기 구동 (데이터 복원 및 충돌 검사)
-        document.addEventListener('DOMContentLoaded', function() {
+        // 안전한 페이지 초기 구동 (GitHub Pages에서도 반드시 한 번 실행)
+        function initApp() {
             try {
                 const saved = localStorage.getItem('enzyme_student_data');
-                if(saved) {
-                    const parsed = JSON.parse(saved);
-                    // 옛날 방식 데이터 구조(문자열형 단계)가 검출되면 안전하게 초기화
-                    if (typeof parsed.currentStep !== 'number' || parsed.currentStep < 1 || parsed.currentStep > 6) {
-                        console.warn("이전 오염된 데이터 포착: 자가 치료(Self-healing)를 가동합니다.");
-                        studentData = getInitialState();
-                        localStorage.setItem('enzyme_student_data', JSON.stringify(studentData));
-                    } else {
-                        studentData = parsed;
-                    }
-                }
+                studentData = saved ? normalizeStudentData(JSON.parse(saved)) : getInitialState();
+                localStorage.setItem('enzyme_student_data', JSON.stringify(studentData));
+                renderStep();
             } catch(e) {
-                console.error("데이터 복원 실패, 초기값으로 실행합니다.", e);
                 studentData = getInitialState();
+                try {
+                    localStorage.removeItem('enzyme_student_data');
+                } catch (_) {}
+                showFatalError(e);
             }
-            renderStep();
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp, { once: true });
+        } else {
+            initApp();
+        }
 
         // 수동 초기화 버튼 (오류 자가 치료용)
         function clearAllDataAndReset() {
@@ -242,7 +299,7 @@
                                 <p class="text-slate-500 text-sm mb-8">모둠원 대표의 학번과 이름을 입력하고 탐구를 시작해 주세요.</p>
                                 <div class="text-left bg-slate-50 p-6 rounded-2xl border border-slate-200/60 mb-6">
                                     <label class="block text-xs font-bold text-slate-600 uppercase mb-2">학번과 이름 입력</label>
-                                    <input type="text" id="stuName" value="${studentData.name || ''}" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-500 font-medium placeholder-slate-400 shadow-sm" placeholder="예) 20101 홍길동">
+                                    <input type="text" id="stuName" value="${escapeHtml(studentData.name || '')}" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-500 font-medium placeholder-slate-400 shadow-sm" placeholder="예) 20101 홍길동">
                                 </div>
                             </div>
                         </div>
@@ -441,7 +498,7 @@
                             <div class="space-y-4 my-6">
                                 <div class="bg-slate-50 p-5 rounded-2xl border">
                                     <label class="block text-sm font-bold text-slate-700 mb-2">Q. 실험 결과 분석을 통해 내린 최종 결론을 자유롭게 서술하세요.</label>
-                                    <textarea id="conclusionText" class="w-full border rounded-xl p-4 text-sm focus:outline-emerald-500 min-h-[120px]" placeholder="예) 실험 결과 카탈레이스 효소는 중성 환경(pH 7 부근)인 시험관 B에서 반응속도(1/t)가 가장 높게 나타났다. 따라서 카탈레이스의 최적 pH는 중성 범위임을 알 수 있다.">${studentData.conclusion || ''}</textarea>
+                                    <textarea id="conclusionText" class="w-full border rounded-xl p-4 text-sm focus:outline-emerald-500 min-h-[120px]" placeholder="예) 실험 결과 카탈레이스 효소는 중성 환경(pH 7 부근)인 시험관 B에서 반응속도(1/t)가 가장 높게 나타났다. 따라서 카탈레이스의 최적 pH는 중성 범위임을 알 수 있다.">${escapeHtml(studentData.conclusion || '')}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -566,6 +623,15 @@
                 alert('생명과학적 독립변인과 종속변인 배치가 올바르지 않습니다. 다시 검토하세요!');
                 return;
             }
+            studentData.variables = {
+                independent: '용액의 pH 환경',
+                dependent: '거름종이가 뜨는 시간',
+                controlled: selectedVariableIds.controlled.map(id => {
+                    const item = variableOptions.find(v => v.id === id);
+                    return item ? item.text : id;
+                })
+            };
+            saveData();
             nextStep();
         }
 
@@ -607,6 +673,19 @@
 
             const canvas = document.getElementById('speedChart');
             if(!canvas) return;
+
+            if (typeof Chart === 'undefined') {
+                const box = canvas.parentElement;
+                if (box) {
+                    box.innerHTML = `
+                        <div class="p-6 text-center">
+                            <p class="font-bold text-slate-800 mb-2">그래프 라이브러리를 불러오지 못했습니다.</p>
+                            <p class="text-xs text-slate-500">학교 네트워크에서 jsDelivr가 차단되었을 수 있습니다. 계산값은 오른쪽에서 확인할 수 있습니다.</p>
+                        </div>`;
+                }
+                return;
+            }
+
             const ctx = canvas.getContext('2d');
             if(myChart) myChart.destroy();
 
@@ -741,7 +820,7 @@
 
             tbody.innerHTML = `
                 <tr class="hover:bg-slate-50/80 transition">
-                    <td class="p-4 font-semibold text-slate-800">${currentStudent.name}</td>
+                    <td class="p-4 font-semibold text-slate-800">${escapeHtml(currentStudent.name)}</td>
                     <td class="p-4"><span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-1 rounded-md border border-indigo-100">${curStepName}</span></td>
                     <td class="p-4 font-mono text-xs text-slate-600">A: ${currentStudent.expData.a.ph || '-'} / B: ${currentStudent.expData.b.ph || '-'} / C: ${currentStudent.expData.c.ph || '-'}</td>
                     <td class="p-4">${currentStudent.isSubmitted ? '<span class="text-emerald-600 font-bold text-xs"><i class="fa-solid fa-circle-check"></i> 완료됨</span>' : '<span class="text-amber-500 font-medium text-xs"><i class="fa-solid fa-spinner animate-spin"></i> 작성 중</span>'}</td>
