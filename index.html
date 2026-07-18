@@ -1,832 +1,894 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>생명과학 실험 활동지 - 카탈레이스 반응 속도</title>
-    <!-- Tailwind CSS (UI 디자인용) -->
-    <script defer src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome (아이콘용) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js (그래프 시각화용) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/chart.js" onerror="window.__chartLoadFailed = true;"></script>
-    <style>
-        .step-active { background-color: #10B981; color: white; }
-        .variable-card { cursor: pointer; transition: all 0.2s; }
-        .variable-card:hover { transform: translateY(-2px); }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <title>카탈레이스 효소 반응 속도 탐구</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dfe6ef;
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --primary-soft: #e7f7f4;
+      --blue: #3156d3;
+      --blue-soft: #eef2ff;
+      --amber: #a15c00;
+      --amber-soft: #fff7e6;
+      --red: #b42318;
+      --red-soft: #fff0ee;
+      --green: #067647;
+      --green-soft: #ecfdf3;
+      --shadow: 0 10px 30px rgba(28, 39, 60, 0.08);
+      --radius: 22px;
+    }
 
-        /* Tailwind CDN이 차단돼도 첫 화면이 보이도록 하는 최소 안전 스타일 */
-        body { margin: 0; background: #f8fafc; color: #1e293b; font-family: Arial, "Noto Sans KR", sans-serif; }
-        #main-card { background: white; min-height: 450px; }
-        .hidden { display: none !important; }
-    </style>
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background: var(--bg);
+      font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { touch-action: manipulation; }
+    .hidden { display: none !important; }
+    .app { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 48px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      padding: 20px 22px; margin-bottom: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .brand-icon {
+      width: 58px; height: 58px; flex: 0 0 58px; display: grid; place-items: center;
+      border-radius: 17px; background: linear-gradient(135deg, #dff7f3, #eef2ff); font-size: 30px;
+    }
+    .brand h1 { margin: 0; font-size: clamp(21px, 3vw, 29px); letter-spacing: -0.03em; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .sync-badge {
+      display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 8px 11px;
+      border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--muted); font-size: 13px; font-weight: 700;
+    }
+    .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: #98a2b3; }
+    .sync-badge.online .sync-dot { background: #12b76a; }
+    .sync-badge.saving .sync-dot { background: #f79009; animation: pulse 1s infinite; }
+    .sync-badge.offline .sync-dot { background: #f04438; }
+    @keyframes pulse { 50% { opacity: .35; } }
+
+    .btn {
+      min-height: 46px; border: 0; border-radius: 14px; padding: 11px 16px; cursor: pointer;
+      font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { color: #fff; background: var(--primary); box-shadow: 0 8px 18px rgba(15,118,110,.2); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-dark { color: #fff; background: #1d2939; }
+    .btn-soft { color: #344054; background: #f2f4f7; border: 1px solid #e4e7ec; }
+    .btn-danger { color: var(--red); background: var(--red-soft); border: 1px solid #ffd5d0; }
+    .btn-small { min-height: 38px; padding: 8px 12px; border-radius: 11px; font-size: 13px; }
+
+    .stepper { padding: 14px 16px; margin-bottom: 16px; overflow-x: auto; }
+    .step-track { display: grid; grid-template-columns: repeat(6, minmax(110px, 1fr)); min-width: 720px; gap: 8px; }
+    .step-item {
+      display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 13px; color: #98a2b3; font-size: 13px; font-weight: 800;
+    }
+    .step-num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #f2f4f7; flex: 0 0 30px; }
+    .step-item.active { color: var(--primary-dark); background: var(--primary-soft); }
+    .step-item.active .step-num { color: #fff; background: var(--primary); }
+    .step-item.done { color: #344054; }
+    .step-item.done .step-num { color: var(--green); background: var(--green-soft); }
+
+    .main-card { min-height: 520px; padding: clamp(20px, 3vw, 34px); }
+    .page-head { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 22px; }
+    .page-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--primary-soft); display: grid; place-items: center; font-size: 22px; flex: 0 0 44px; }
+    .page-head h2 { margin: 0; font-size: clamp(21px, 3vw, 27px); letter-spacing: -0.02em; }
+    .page-head p { margin: 4px 0 0; color: var(--muted); }
+    .section-title { margin: 0 0 10px; font-size: 17px; }
+    .subtle { color: var(--muted); font-size: 14px; }
+    .notice { border-radius: 16px; padding: 14px 16px; margin: 14px 0; font-size: 14px; }
+    .notice.info { background: var(--blue-soft); color: #3043a7; border: 1px solid #d9e0ff; }
+    .notice.warn { background: var(--amber-soft); color: #7a4600; border: 1px solid #f5dba8; }
+    .notice.good { background: var(--green-soft); color: #05603a; border: 1px solid #b7ebce; }
+    .notice.bad { background: var(--red-soft); color: #912018; border: 1px solid #ffd2cc; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 800; color: #344054; }
+    .required::after { content: " *"; color: var(--red); }
+    .input, .select, .textarea {
+      width: 100%; min-height: 50px; border: 1.5px solid #cfd8e5; border-radius: 14px; background: #fff; color: var(--text);
+      padding: 12px 14px; outline: none; font-size: 16px;
+    }
+    .textarea { min-height: 112px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(15,118,110,.12); }
+    .help { margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+    .choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .choice {
+      position: relative; min-height: 78px; padding: 14px 15px; border: 2px solid #e4e7ec; border-radius: 16px;
+      background: #fff; cursor: pointer; display: flex; gap: 11px; align-items: flex-start;
+    }
+    .choice input { width: 22px; height: 22px; accent-color: var(--primary); flex: 0 0 22px; margin-top: 1px; }
+    .choice:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+    .choice strong { display: block; font-size: 15px; }
+    .choice span { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; }
+
+    .mini-card { border: 1px solid var(--line); border-radius: 17px; padding: 16px; background: #fff; }
+    .mini-card h3 { margin: 0 0 12px; font-size: 16px; }
+    .control-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .check-row { display: flex; align-items: flex-start; gap: 9px; padding: 10px; border-radius: 12px; background: #f8fafc; font-size: 14px; }
+    .check-row input { width: 20px; height: 20px; accent-color: var(--primary); flex: 0 0 20px; }
+
+    .group-card { border: 2px solid #e4e7ec; border-radius: 18px; padding: 16px; background: #fff; }
+    .group-card.acid { border-top-color: #f97066; }
+    .group-card.neutral { border-top-color: #12b76a; }
+    .group-card.base { border-top-color: #53b1fd; }
+    .group-badge { display: inline-block; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 900; margin-bottom: 10px; }
+    .acid .group-badge { color: #9c2a22; background: #fee4e2; }
+    .neutral .group-badge { color: #05603a; background: #d1fadf; }
+    .base .group-badge { color: #175cd3; background: #d1e9ff; }
+
+    .procedure { counter-reset: procedure; display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .procedure li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; padding: 12px; border-radius: 13px; background: #f8fafc; }
+    .procedure li::before { counter-increment: procedure; content: counter(procedure); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: white; font-weight: 900; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 17px; }
+    table { border-collapse: collapse; width: 100%; min-width: 760px; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: middle; }
+    th { background: #f8fafc; color: #475467; font-size: 13px; }
+    td:first-child, th:first-child { text-align: left; }
+    .table-input { width: 92px; min-height: 44px; border: 1.5px solid #cfd8e5; border-radius: 11px; padding: 8px; text-align: center; font-size: 16px; }
+    .calc-box { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-top: 14px; }
+    .calc-item { padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; text-align: center; }
+    .calc-item b { display: block; margin-top: 3px; font-size: 18px; }
+
+    .chart-wrap { border: 1px solid var(--line); border-radius: 18px; padding: 12px; background: #fff; overflow: hidden; }
+    .chart-wrap svg { display: block; width: 100%; height: auto; min-height: 280px; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+    .summary-strip { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin: 14px 0; }
+    .summary-box { padding: 14px; border-radius: 15px; background: #f8fafc; border: 1px solid var(--line); }
+    .summary-box span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .summary-box strong { display: block; margin-top: 4px; font-size: 18px; }
+
+    .footer-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }
+    .footer-nav .right { display: flex; gap: 8px; margin-left: auto; }
+    .progress-note { color: var(--muted); font-size: 13px; }
+
+    .overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(16,24,40,.55); backdrop-filter: blur(4px); }
+    .modal { width: min(1080px, 100%); max-height: 92vh; overflow: auto; background: #fff; border-radius: 24px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,.25); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+    .modal-head h2 { margin: 0; }
+    .close-btn { width: 42px; height: 42px; border: 0; border-radius: 50%; background: #f2f4f7; cursor: pointer; font-size: 22px; }
+    .dashboard-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+    .dashboard-toolbar .input { min-height: 42px; width: min(300px, 100%); }
+    .stat-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+    .stat { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: #f8fafc; }
+    .stat span { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .stat strong { display: block; margin-top: 3px; font-size: 24px; }
+    .status-pill { display: inline-block; border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 900; }
+    .status-pill.done { color: #05603a; background: #d1fadf; }
+    .status-pill.work { color: #934b00; background: #ffead5; }
+    .detail-box { white-space: pre-wrap; background: #f8fafc; border: 1px solid var(--line); border-radius: 14px; padding: 14px; font-size: 14px; }
+
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 200; transform: translateX(-50%); max-width: calc(100% - 30px); padding: 12px 16px; border-radius: 13px; background: #1d2939; color: #fff; box-shadow: var(--shadow); font-weight: 800; font-size: 14px; }
+    .error-boundary { text-align: center; padding: 45px 18px; }
+
+    @media (max-width: 780px) {
+      .app { width: min(100% - 18px, 1120px); padding-top: 9px; }
+      .topbar { align-items: flex-start; padding: 16px; }
+      .brand-icon { width: 50px; height: 50px; flex-basis: 50px; }
+      .top-actions { width: 100%; justify-content: flex-start; }
+      .topbar { flex-direction: column; }
+      .grid-2, .grid-3, .choice-grid, .summary-strip, .stat-grid, .calc-box { grid-template-columns: 1fr; }
+      .control-list { grid-template-columns: 1fr; }
+      .main-card { padding: 18px 15px; }
+      .footer-nav { align-items: stretch; }
+      .footer-nav, .footer-nav .right { flex-direction: column; }
+      .footer-nav .right { margin-left: 0; }
+      .footer-nav .btn { width: 100%; }
+      .btn { min-height: 50px; }
+      .modal { padding: 16px; }
+    }
+  </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans antialiased text-slate-800 pb-12">
-
-    <div class="max-w-5xl mx-auto px-4 pt-6">
-        <!-- 상단 헤더 -->
-        <header class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div class="flex items-center gap-4">
-                <div class="bg-indigo-50 p-3 rounded-xl text-indigo-600 text-2xl">
-                    <i class="fa-solid fa-flask-vial"></i>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-slate-900">🔬 카탈레이스 효소 반응 속도 탐구</h1>
-                    <p class="text-sm text-slate-500 mt-0.5">실제 탐구 기록 및 과학적 결과 그래프 시각화 활동지</p>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="clearAllDataAndReset()" class="bg-slate-100 text-slate-600 px-3 py-2.5 rounded-xl font-semibold text-xs hover:bg-slate-200 transition">
-                    <i class="fa-solid fa-rotate-left"></i> 활동지 초기화
-                </button>
-                <button onclick="toggleDashboard()" id="dashBtn" class="bg-slate-900 text-white px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm hover:bg-slate-800 transition shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-chalkboard-user"></i> 교사 대시보드
-                </button>
-            </div>
-        </header>
-
-        <!-- 인디케이터 (단계 표시 바) -->
-        <nav class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 overflow-x-auto">
-            <div class="flex justify-between items-center min-w-[600px] px-4">
-                <div class="flex items-center gap-2 step-indicator" id="ind-1"><span class="w-8 h-8 rounded-full flex items-center justify-center font-bold step-active">1</span> <span class="text-sm font-semibold">시작하기</span></div>
-                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
-                <div class="flex items-center gap-2 step-indicator" id="ind-2"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">2</span> <span class="text-sm font-medium text-slate-400">가설 설정</span></div>
-                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
-                <div class="flex items-center gap-2 step-indicator" id="ind-3"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">3</span> <span class="text-sm font-medium text-slate-400">실험 설계</span></div>
-                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
-                <div class="flex items-center gap-2 step-indicator" id="ind-4"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">4</span> <span class="text-sm font-medium text-slate-400">결과 기록</span></div>
-                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
-                <div class="flex items-center gap-2 step-indicator" id="ind-5"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">5</span> <span class="text-sm font-medium text-slate-400">속도 해석</span></div>
-                <div class="h-px bg-slate-200 flex-1 mx-4"></div>
-                <div class="flex items-center gap-2 step-indicator" id="ind-6"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">6</span> <span class="text-sm font-medium text-slate-400">결론 & 제출</span></div>
-            </div>
-        </nav>
-
-        <!-- 메인 콘텐츠 영역 -->
-        <main id="main-card" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 min-h-[450px] flex flex-col justify-between">
-            <div class="text-center py-12">
-                <i class="fa-solid fa-spinner animate-spin text-4xl text-indigo-500 mb-4"></i>
-                <p class="text-slate-500 font-medium">실험 활동지를 로드하고 있습니다...</p>
-            </div>
-        </main>
-    </div>
-
-    <!-- 교사 대시보드 모달 -->
-    <div id="dashModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[85vh] overflow-y-auto p-8 shadow-xl border border-slate-100">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
-                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-chart-pie text-emerald-500"></i> 실시간 교사 모니터링 허브</h2>
-                <button onclick="toggleDashboard()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div id="authZone" class="py-12 text-center">
-                <p class="text-slate-600 mb-4 font-medium">교사용 비밀번호를 입력하세요.</p>
-                <div class="flex justify-center gap-2 max-w-xs mx-auto">
-                    <input type="password" id="dashPw" class="border rounded-xl px-4 py-2 w-full focus:outline-emerald-500" placeholder="비밀번호">
-                    <button onclick="checkPw()" class="bg-emerald-500 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-600 transition">확인</button>
-                </div>
-                <p class="text-xs text-slate-400 mt-2">안내: 교사용 초기 비밀번호는 <code class="bg-slate-100 px-1 py-0.5 rounded font-bold">science</code> 입니다.</p>
-            </div>
-            <div id="dashContent" class="hidden space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-slate-50 p-4 rounded-2xl border text-center">
-                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">총 참여 학생</p>
-                        <p class="text-3xl font-bold mt-1 text-slate-900" id="stat-total">0명</p>
-                    </div>
-                    <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
-                        <p class="text-xs text-emerald-600 font-bold uppercase tracking-wider">최종 제출 완료</p>
-                        <p class="text-3xl font-bold mt-1 text-emerald-700" id="stat-submit">0명</p>
-                    </div>
-                    <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-center">
-                        <p class="text-xs text-amber-600 font-bold uppercase tracking-wider">실험 설계 통과율</p>
-                        <p class="text-3xl font-bold mt-1 text-amber-700">100%</p>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800 mb-3"><i class="fa-solid fa-list-check mr-1 text-slate-500"></i> 학생별 탐구 진행 현황</h3>
-                    <div class="overflow-x-auto border rounded-2xl bg-white">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 border-b text-slate-600 text-xs font-bold uppercase">
-                                    <th class="p-4">학번/이름</th>
-                                    <th class="p-4">현재 단계</th>
-                                    <th class="p-4">설정 pH값 (A / B / C)</th>
-                                    <th class="p-4">제출 여부</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dashTableBody" class="text-sm divide-y">
-                                <!-- 학생 데이터 행 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+<body>
+  <div class="app">
+    <header class="card topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🧪</div>
+        <div>
+          <h1>카탈레이스 효소 반응 속도 탐구</h1>
+          <p>50분 안에 pH에 따른 반응 속도를 측정하고 근거를 들어 결론을 내려 봅시다.</p>
         </div>
-    </div>
+      </div>
+      <div class="top-actions">
+        <div id="syncBadge" class="sync-badge" aria-live="polite"><span class="sync-dot"></span><span id="syncText">이 기기에 자동 저장</span></div>
+        <button class="btn btn-soft btn-small" type="button" onclick="resetActivity()">↺ 초기화</button>
+      </div>
+    </header>
 
-    <script>
-        // GitHub Pages/CDN/브라우저 저장 데이터 문제에도 화면이 멈추지 않도록 하는 안전 장치
-        function escapeHtml(value) {
-            return String(value ?? '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#039;');
+    <nav class="card stepper" aria-label="활동 단계">
+      <div id="stepTrack" class="step-track"></div>
+    </nav>
+
+    <main id="mainCard" class="card main-card" tabindex="-1">
+      <div class="error-boundary">활동지를 불러오는 중입니다…</div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden" aria-live="polite"></div>
+
+  <script>
+    'use strict';
+
+    /* =========================================================
+       1) 아래 API_URL만 Google Apps Script 배포 주소로 바꾸세요.
+       예: https://script.google.com/macros/s/AKfycb.../exec
+       ========================================================= */
+    const CONFIG = {
+      API_URL: 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE',
+      STORAGE_KEY: 'catalase_activity_v4_single',
+      AUTO_SYNC_DELAY_MS: 900,
+      MAX_TIME_SECONDS: 600
+    };
+
+    const STEP_NAMES = ['시작', '가설', '실험 설계', '결과 기록', '해석·그래프', '결론·제출'];
+    const GROUPS = [
+      { id: 'A', label: '산성 조건', className: 'acid', defaultTarget: 3 },
+      { id: 'B', label: '중성 부근 조건', className: 'neutral', defaultTarget: 7 },
+      { id: 'C', label: '염기성 조건', className: 'base', defaultTarget: 11 }
+    ];
+    const CONTROL_OPTIONS = [
+      '과산화수소수의 농도와 부피',
+      '카탈레이스 용액의 농도',
+      '거름종이 원판의 크기',
+      '거름종이를 카탈레이스에 담그는 시간',
+      '거름종이의 물기를 제거하는 방법',
+      '반응 용액의 온도',
+      '용액의 전체 부피와 깊이'
+    ];
+
+    let state = initialState();
+    let syncTimer = null;
+
+    function initialState() {
+      return {
+        version: 4,
+        step: 1,
+        student: { className: '', studentNo: '', name: '' },
+        hypothesis: { prediction: '', reason: '' },
+        design: {
+          independent: 'pH',
+          dependent: 'riseTime',
+          controls: [...CONTROL_OPTIONS],
+          targets: { A: 3, B: 7, C: 11 }
+        },
+        results: {
+          A: { actualPh: '', trials: [''] },
+          B: { actualPh: '', trials: [''] },
+          C: { actualPh: '', trials: [''] }
+        },
+        analysis: { supported: '', evidence: '', explanation: '', limitation: '' },
+        conclusion: '',
+        submitted: false,
+        updatedAt: ''
+      };
+    }
+
+    function isApiConfigured() {
+      return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(CONFIG.API_URL.trim());
+    }
+
+    function safeText(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function normalize(raw) {
+      const base = initialState();
+      if (!raw || typeof raw !== 'object') return base;
+      const step = Number(raw.step);
+      base.step = Number.isInteger(step) && step >= 1 && step <= 6 ? step : 1;
+      base.student.className = String(raw.student?.className ?? '');
+      base.student.studentNo = String(raw.student?.studentNo ?? '');
+      base.student.name = String(raw.student?.name ?? '');
+      base.hypothesis.prediction = String(raw.hypothesis?.prediction ?? '');
+      base.hypothesis.reason = String(raw.hypothesis?.reason ?? '');
+      base.design.independent = String(raw.design?.independent ?? 'pH');
+      base.design.dependent = String(raw.design?.dependent ?? 'riseTime');
+      base.design.controls = Array.isArray(raw.design?.controls) ? raw.design.controls.filter(x => CONTROL_OPTIONS.includes(x)) : [...CONTROL_OPTIONS];
+      for (const g of GROUPS) {
+        const target = Number(raw.design?.targets?.[g.id]);
+        base.design.targets[g.id] = Number.isFinite(target) ? target : g.defaultTarget;
+        const actualPh = raw.results?.[g.id]?.actualPh;
+        base.results[g.id].actualPh = actualPh === '' || actualPh == null ? '' : Number(actualPh);
+        if (!Number.isFinite(base.results[g.id].actualPh)) base.results[g.id].actualPh = '';
+        const trials = Array.isArray(raw.results?.[g.id]?.trials) ? raw.results[g.id].trials.slice(0,1) : [];
+        base.results[g.id].trials = [0].map(i => {
+          const n = trials[i];
+          if (n === '' || n == null) return '';
+          const v = Number(n);
+          return Number.isFinite(v) ? v : '';
+        });
+      }
+      base.analysis.supported = String(raw.analysis?.supported ?? '');
+      base.analysis.evidence = String(raw.analysis?.evidence ?? '');
+      base.analysis.explanation = String(raw.analysis?.explanation ?? '');
+      base.analysis.limitation = String(raw.analysis?.limitation ?? '');
+      base.conclusion = String(raw.conclusion ?? '');
+      base.submitted = raw.submitted === true;
+      base.updatedAt = String(raw.updatedAt ?? '');
+      return base;
+    }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(CONFIG.STORAGE_KEY);
+        state = saved ? normalize(JSON.parse(saved)) : initialState();
+      } catch (error) {
+        console.error(error);
+        state = initialState();
+        localStorage.removeItem(CONFIG.STORAGE_KEY);
+      }
+    }
+
+    function saveLocal() {
+      state.updatedAt = new Date().toISOString();
+      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state));
+      scheduleSync();
+    }
+
+    function scheduleSync() {
+      if (!hasStudentIdentity()) {
+        setSyncStatus('local', '이 기기에 자동 저장');
+        return;
+      }
+      if (!isApiConfigured()) {
+        setSyncStatus('local', '서버 미연결 · 기기에 저장');
+        return;
+      }
+      clearTimeout(syncTimer);
+      setSyncStatus('saving', '저장 중…');
+      syncTimer = setTimeout(() => syncToServer(false), CONFIG.AUTO_SYNC_DELAY_MS);
+    }
+
+    function hasStudentIdentity() {
+      return Boolean(state.student.className.trim() && state.student.studentNo.trim() && state.student.name.trim());
+    }
+
+    function studentKey() {
+      return `${state.student.className.trim()}-${state.student.studentNo.trim()}`;
+    }
+
+    function makePayload(finalSubmit) {
+      return {
+        action: 'save',
+        finalSubmit: Boolean(finalSubmit),
+        studentKey: studentKey(),
+        className: state.student.className.trim(),
+        studentNo: state.student.studentNo.trim(),
+        name: state.student.name.trim(),
+        currentStep: state.step,
+        submitted: state.submitted,
+        hypothesis: state.hypothesis,
+        design: state.design,
+        results: state.results,
+        calculated: calculateAll(),
+        analysis: state.analysis,
+        conclusion: state.conclusion,
+        clientUpdatedAt: state.updatedAt
+      };
+    }
+
+    async function apiPost(payload) {
+      const response = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow',
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const text = await response.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error('서버 응답이 JSON이 아닙니다. Apps Script 배포 설정을 확인하세요.'); }
+      if (!data.ok) throw new Error(data.message || '서버 처리 실패');
+      return data;
+    }
+
+    async function syncToServer(finalSubmit) {
+      if (!isApiConfigured() || !hasStudentIdentity()) return { ok: false, localOnly: true };
+      try {
+        setSyncStatus('saving', finalSubmit ? '제출 중…' : '저장 중…');
+        const result = await apiPost(makePayload(finalSubmit));
+        setSyncStatus('online', finalSubmit ? '제출 완료' : '서버 저장 완료');
+        return result;
+      } catch (error) {
+        console.error(error);
+        setSyncStatus('offline', '서버 연결 실패 · 기기에 저장됨');
+        if (finalSubmit) showToast(`서버 제출에 실패했습니다. 인터넷 연결 후 다시 눌러 주세요. (${error.message})`, 5000);
+        return { ok: false, error };
+      }
+    }
+
+    function setSyncStatus(type, text) {
+      const badge = document.getElementById('syncBadge');
+      const label = document.getElementById('syncText');
+      if (!badge || !label) return;
+      badge.className = 'sync-badge' + (type === 'online' ? ' online' : type === 'saving' ? ' saving' : type === 'offline' ? ' offline' : '');
+      label.textContent = text;
+    }
+
+    function showToast(message, duration = 2600) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.classList.remove('hidden');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => el.classList.add('hidden'), duration);
+    }
+
+    function renderStepper() {
+      const track = document.getElementById('stepTrack');
+      track.innerHTML = STEP_NAMES.map((name, i) => {
+        const n = i + 1;
+        const cls = n === state.step ? 'active' : n < state.step ? 'done' : '';
+        const num = n < state.step ? '✓' : n;
+        return `<div class="step-item ${cls}"><span class="step-num">${num}</span><span>${name}</span></div>`;
+      }).join('');
+    }
+
+    function render() {
+      renderStepper();
+      const main = document.getElementById('mainCard');
+      try {
+        const renderer = [null, renderStart, renderHypothesis, renderDesign, renderResults, renderAnalysis, renderConclusion][state.step];
+        main.innerHTML = renderer();
+        main.focus({ preventScroll: true });
+        if (state.step === 4) updateResultPreview();
+      } catch (error) {
+        console.error('render failed', error);
+        main.innerHTML = `<div class="error-boundary"><h2>화면을 불러오지 못했습니다.</h2><p class="subtle">저장 데이터가 충돌했을 수 있습니다.</p><button class="btn btn-danger" onclick="resetActivity(true)">저장 데이터 비우고 다시 시작</button></div>`;
+      }
+    }
+
+    function pageHead(icon, title, description) {
+      return `<div class="page-head"><div class="page-icon">${icon}</div><div><h2>${title}</h2><p>${description}</p></div></div>`;
+    }
+
+    function footerNav(nextLabel, nextFn, back = true) {
+      return `<div class="footer-nav">
+        ${back ? '<button class="btn btn-soft" type="button" onclick="goBack()">← 이전 단계</button>' : '<span class="progress-note">입력 내용은 자동 저장됩니다.</span>'}
+        <div class="right"><button class="btn btn-primary" type="button" onclick="${nextFn}">${nextLabel} →</button></div>
+      </div>`;
+    }
+
+    function renderStart() {
+      return `${pageHead('👋', '활동 시작하기', '반과 번호, 이름을 입력하면 이 기기에 자동 저장됩니다.')}
+        <div class="notice info"><b>디벗 사용 안내</b><br>한 번 입력한 내용은 같은 브라우저에서 자동으로 이어집니다. 화면을 닫아도 괜찮습니다.</div>
+        <div class="grid-3">
+          <div class="field"><label class="required" for="className">반</label><input class="input" id="className" inputmode="numeric" maxlength="10" placeholder="예: 2-3" value="${safeText(state.student.className)}"></div>
+          <div class="field"><label class="required" for="studentNo">번호</label><input class="input" id="studentNo" inputmode="numeric" maxlength="4" placeholder="예: 12" value="${safeText(state.student.studentNo)}"></div>
+          <div class="field"><label class="required" for="studentName">이름</label><input class="input" id="studentName" autocomplete="name" maxlength="20" placeholder="예: 홍길동" value="${safeText(state.student.name)}"></div>
+        </div>
+        <div class="mini-card">
+          <h3>오늘의 탐구 질문</h3>
+          <p style="margin:0;font-size:18px;font-weight:800">용액의 pH가 달라지면 카탈레이스의 반응 속도는 어떻게 달라질까?</p>
+          <p class="subtle">거름종이가 수면까지 떠오르는 시간을 측정하고, 반응 속도는 <b>1 ÷ 시간</b>으로 비교합니다.</p>
+        </div>
+        ${footerNav('가설 세우기', 'saveStart()', false)}`;
+    }
+
+    function saveStart() {
+      const className = document.getElementById('className').value.trim();
+      const studentNo = document.getElementById('studentNo').value.trim();
+      const name = document.getElementById('studentName').value.trim();
+      if (!className || !studentNo || !name) return showToast('반, 번호, 이름을 모두 입력해 주세요.');
+      if (!/^\d{1,2}[-반]?\d{0,2}$/.test(className) && className.length < 1) return showToast('반을 확인해 주세요.');
+      state.student = { className, studentNo, name };
+      state.step = 2;
+      saveLocal();
+      render();
+    }
+
+    function renderHypothesis() {
+      const choices = [
+        ['acid', '산성 조건에서 가장 빠를 것이다', 'A 조건의 반응 속도가 가장 클 것으로 예상'],
+        ['neutral', '중성에 가까운 조건에서 가장 빠를 것이다', 'B 조건의 반응 속도가 가장 클 것으로 예상'],
+        ['base', '염기성 조건에서 가장 빠를 것이다', 'C 조건의 반응 속도가 가장 클 것으로 예상'],
+        ['same', 'pH가 달라도 큰 차이가 없을 것이다', '세 조건의 반응 속도가 비슷할 것으로 예상']
+      ];
+      return `${pageHead('💡', '1. 가설 설정', '실험 전에 예상되는 결과와 그 까닭을 문장으로 나타냅니다.')}
+        <div class="field"><label class="required">어느 조건에서 반응 속도가 가장 클 것으로 예상하나요?</label>
+          <div class="choice-grid">${choices.map(([v,t,s]) => `<label class="choice"><input type="radio" name="prediction" value="${v}" ${state.hypothesis.prediction===v?'checked':''}><div><strong>${t}</strong><span>${s}</span></div></label>`).join('')}</div>
+        </div>
+        <div class="field">
+          <label class="required" for="hypothesisReason">그렇게 예상한 까닭</label>
+          <textarea class="textarea" id="hypothesisReason" maxlength="400" placeholder="예: 효소는 특정 pH에서 입체 구조가 안정되어 더 잘 작용할 것이라고 생각했기 때문이다.">${safeText(state.hypothesis.reason)}</textarea>
+          <div style="margin-top:8px"><button class="btn btn-soft btn-small" type="button" onclick="fillHypothesisHelp()">문장 도움 받기</button></div>
+        </div>
+        <div class="notice warn"><b>주의</b>　가설은 정답을 맞히는 문장이 아닙니다. 실험으로 확인할 수 있는 예상이면 됩니다.</div>
+        ${footerNav('실험 설계하기', 'saveHypothesis()')}`;
+    }
+
+    function fillHypothesisHelp() {
+      const selected = document.querySelector('input[name="prediction"]:checked')?.value;
+      const area = document.getElementById('hypothesisReason');
+      if (!selected) return showToast('먼저 예상 결과를 하나 선택해 주세요.');
+      const text = selected === 'neutral'
+        ? '카탈레이스는 중성에 가까운 pH에서 단백질의 입체 구조와 활성 부위가 비교적 안정되어 더 잘 작용할 것이라고 생각했기 때문이다.'
+        : selected === 'same'
+          ? 'pH가 달라도 사용한 카탈레이스의 양과 과산화수소수의 양이 같다면 반응 속도 차이가 크지 않을 것이라고 생각했기 때문이다.'
+          : 'pH가 달라지면 카탈레이스 단백질의 구조와 활성 부위 상태가 달라져 반응 속도에 차이가 생길 것이라고 생각했기 때문이다.';
+      area.value = text;
+      area.focus();
+    }
+
+    function saveHypothesis() {
+      const prediction = document.querySelector('input[name="prediction"]:checked')?.value || '';
+      const reason = document.getElementById('hypothesisReason').value.trim();
+      if (!prediction) return showToast('예상 결과를 하나 선택해 주세요.');
+      if (reason.length < 10) return showToast('예상한 까닭을 한 문장 이상 적어 주세요.');
+      state.hypothesis = { prediction, reason };
+      state.step = 3;
+      saveLocal();
+      render();
+    }
+
+    function renderDesign() {
+      return `${pageHead('🧩', '2. 실험 설계', '변인을 구분하고 세 실험 조건을 정하면 실험 과정이 자동으로 완성됩니다.')}
+        <div class="grid-2">
+          <div class="mini-card">
+            <h3>① 변인 정의</h3>
+            <div class="field"><label class="required" for="independent">독립 변인(의도적으로 다르게 하는 조건)</label>
+              <select class="select" id="independent">
+                <option value="">선택</option>
+                <option value="pH" ${state.design.independent==='pH'?'selected':''}>용액의 pH</option>
+                <option value="time" ${state.design.independent==='time'?'selected':''}>거름종이가 떠오르는 시간</option>
+                <option value="catalase" ${state.design.independent==='catalase'?'selected':''}>카탈레이스의 양</option>
+              </select>
+            </div>
+            <div class="field"><label class="required" for="dependent">종속 변인(측정하여 비교하는 결과)</label>
+              <select class="select" id="dependent">
+                <option value="">선택</option>
+                <option value="riseTime" ${state.design.dependent==='riseTime'?'selected':''}>거름종이가 떠오르는 시간과 반응 속도(1/t)</option>
+                <option value="pH" ${state.design.dependent==='pH'?'selected':''}>용액의 pH</option>
+                <option value="volume" ${state.design.dependent==='volume'?'selected':''}>과산화수소수의 부피</option>
+              </select>
+            </div>
+          </div>
+          <div class="mini-card">
+            <h3>② 통제 변인</h3>
+            <p class="subtle">pH 외에는 가능한 한 같게 유지해야 공정하게 비교할 수 있습니다. 필요한 항목을 선택하세요.</p>
+            <div class="control-list">${CONTROL_OPTIONS.map(item => `<label class="check-row"><input type="checkbox" name="control" value="${safeText(item)}" ${state.design.controls.includes(item)?'checked':''}><span>${item}</span></label>`).join('')}</div>
+          </div>
+        </div>
+
+        <h3 class="section-title" style="margin-top:22px">③ 실험군별 목표 조건</h3>
+        <div class="grid-3">${GROUPS.map(g => `<div class="group-card ${g.className}"><span class="group-badge">${g.id} · ${g.label}</span><div class="field" style="margin:0"><label for="target-${g.id}">목표 pH</label><input class="input" id="target-${g.id}" type="number" min="0" max="14" step="0.1" value="${safeText(state.design.targets[g.id])}"></div></div>`).join('')}</div>
+
+        <div class="notice warn"><b>과학적 주의점</b><br>염산·수산화나트륨만 사용하면 pH가 반응 중 변할 수 있습니다. 따라서 ‘산성·중성·염기성’이라는 이름만 믿지 말고, <b>반응 직전 실제 pH를 측정하여 기록</b>해야 합니다. 가능하다면 완충 용액을 사용하는 것이 더 정확합니다.</div>
+        <div class="mini-card">
+          <h3>자동 생성 실험 과정</h3>
+          <ol id="procedureList" class="procedure">${procedureHtml(state.design.targets)}</ol>
+        </div>
+        ${footerNav('결과 기록하기', 'saveDesign()')}`;
+    }
+
+    function procedureHtml(targets) {
+      return [
+        `A, B, C 용기에 같은 농도와 부피의 과산화수소수를 넣고 각각 표시한다.`,
+        `희석한 염산·수산화나트륨과 물을 사용하여 A는 pH ${safeText(targets.A)}, B는 pH ${safeText(targets.B)}, C는 pH ${safeText(targets.C)} 부근으로 맞춘다. 세 용액의 전체 부피는 같게 한다.`,
+        `pH 측정기로 각 용액의 <b>반응 직전 실제 pH</b>를 측정한다. 전극은 조건을 바꿀 때마다 증류수로 씻고 물기를 가볍게 제거한다.`,
+        `같은 크기의 거름종이 원판을 카탈레이스 용액에 같은 시간 동안 담근 뒤, 같은 방법으로 겉의 남은 용액을 제거한다.`,
+        `거름종이 원판을 용액 바닥까지 넣는 순간 시간을 재고, 원판이 수면에 도달하면 시간을 멈춘다.`,
+        `각 pH 조건에서 한 번씩 측정한다. 조건마다 새 거름종이 원판을 사용하고, 조건 사이에 도구가 섞이지 않도록 한다.`,
+        `각 조건의 반응 속도는 <b>1 ÷ 떠오르는 시간(s)</b>으로 계산한다.`
+      ].map(x => `<li><div>${x}</div></li>`).join('');
+    }
+
+    function saveDesign() {
+      const independent = document.getElementById('independent').value;
+      const dependent = document.getElementById('dependent').value;
+      const controls = [...document.querySelectorAll('input[name="control"]:checked')].map(el => el.value);
+      const targets = Object.fromEntries(GROUPS.map(g => [g.id, Number(document.getElementById(`target-${g.id}`).value)]));
+      if (independent !== 'pH') return showToast('독립 변인은 용액의 pH입니다. 다시 선택해 주세요.');
+      if (dependent !== 'riseTime') return showToast('종속 변인은 떠오르는 시간과 반응 속도입니다. 다시 선택해 주세요.');
+      if (controls.length < 4) return showToast('공정한 비교를 위해 통제 변인을 4개 이상 선택해 주세요.');
+      if (Object.values(targets).some(v => !Number.isFinite(v) || v < 0 || v > 14)) return showToast('목표 pH는 0~14 사이의 숫자로 입력해 주세요.');
+      if (!(targets.A < targets.B && targets.B < targets.C)) return showToast('A < B < C가 되도록 목표 pH를 확인해 주세요.');
+      state.design = { independent, dependent, controls, targets };
+      state.step = 4;
+      saveLocal();
+      render();
+    }
+
+    function renderResults() {
+      return `${pageHead('⏱️', '3. 결과 기록', '실제 pH와 거름종이가 떠오르는 시간을 한 번씩 입력합니다.')}
+        <div class="notice info"><b>기록 기준</b>　시간은 ‘원판을 바닥에 넣은 순간’부터 ‘수면에 도달한 순간’까지입니다. 단위는 초(s)입니다. 50분 수업이므로 각 조건은 한 번씩 측정합니다.</div>
+        <div class="table-wrap">
+          <table style="min-width:620px">
+            <thead><tr><th>조건</th><th>실제 pH</th><th>떠오르는 시간(s)</th><th>반응 속도 1/t (s⁻¹)</th></tr></thead>
+            <tbody>${GROUPS.map(g => {
+              const r = state.results[g.id];
+              const v = r.trials[0] ?? '';
+              return `<tr><td><b>${g.id}</b> · ${g.label}</td><td><input class="table-input" id="ph-${g.id}" type="number" inputmode="decimal" min="0" max="14" step="0.1" value="${safeText(r.actualPh)}" oninput="updateResultPreview()"></td><td><input class="table-input" id="time-${g.id}-0" type="number" inputmode="decimal" min="0.1" max="${CONFIG.MAX_TIME_SECONDS}" step="0.1" value="${safeText(v)}" oninput="updateResultPreview()"></td><td id="mean-rate-${g.id}">-</td></tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>
+        <div class="calc-box">${GROUPS.map(g => `<div class="calc-item"><span>${g.id} 조건 반응 속도</span><b id="rate-card-${g.id}">-</b></div>`).join('')}</div>
+        <div class="notice warn"><b>왜 1/시간을 사용할까?</b><br>더 빨리 떠오를수록 걸린 시간은 작지만 반응 속도는 큽니다. 따라서 조건을 비교하기 위해 <b>1/t</b>를 사용합니다. 이번 수업은 1회 측정이므로 결과의 신뢰도에는 한계가 있습니다.</div>
+        ${footerNav('그래프로 해석하기', 'saveResults()')}`;
+    }
+
+    function readResultsFromInputs() {
+      const results = {};
+      for (const g of GROUPS) {
+        results[g.id] = {
+          actualPh: document.getElementById(`ph-${g.id}`)?.value ?? state.results[g.id].actualPh,
+          trials: [0].map(i => document.getElementById(`time-${g.id}-${i}`)?.value ?? state.results[g.id].trials[i])
+        };
+      }
+      return results;
+    }
+
+    function calculateGroup(groupResult) {
+      const ph = Number(groupResult.actualPh);
+      const times = groupResult.trials.map(Number).filter(v => Number.isFinite(v) && v > 0);
+      const meanTime = times.length ? times.reduce((a,b)=>a+b,0) / times.length : null;
+      const rates = times.map(t => 1/t);
+      const meanRate = rates.length ? rates.reduce((a,b)=>a+b,0) / rates.length : null;
+      return { ph: Number.isFinite(ph) ? ph : null, times, meanTime, meanRate };
+    }
+
+    function calculateAll(source = state.results) {
+      return Object.fromEntries(GROUPS.map(g => [g.id, calculateGroup(source[g.id])]));
+    }
+
+    function updateResultPreview() {
+      const inputs = readResultsFromInputs();
+      const calc = calculateAll(inputs);
+      for (const g of GROUPS) {
+        const c = calc[g.id];
+        const meanRateEl = document.getElementById(`mean-rate-${g.id}`);
+        const card = document.getElementById(`rate-card-${g.id}`);
+        if (meanRateEl) meanRateEl.textContent = c.meanRate == null ? '-' : c.meanRate.toFixed(4);
+        if (card) card.textContent = c.meanRate == null ? '-' : `${c.meanRate.toFixed(4)} s⁻¹`;
+      }
+    }
+
+    function saveResults() {
+      const raw = readResultsFromInputs();
+      const clean = {};
+      for (const g of GROUPS) {
+        const ph = Number(raw[g.id].actualPh);
+        const trials = raw[g.id].trials.map(Number);
+        if (!Number.isFinite(ph) || ph < 0 || ph > 14) return showToast(`${g.id} 조건의 실제 pH를 0~14 사이로 입력해 주세요.`);
+        if (trials.some(v => !Number.isFinite(v) || v <= 0 || v > CONFIG.MAX_TIME_SECONDS)) return showToast(`${g.id} 조건의 시간을 올바르게 입력해 주세요.`);
+        clean[g.id] = { actualPh: ph, trials };
+      }
+      state.results = clean;
+      state.step = 5;
+      saveLocal();
+      render();
+    }
+
+    function predictionLabel(value) {
+      return ({ acid:'산성 조건', neutral:'중성 부근 조건', base:'염기성 조건', same:'조건 간 큰 차이 없음' })[value] || '-';
+    }
+
+    function fastestResult() {
+      const calc = calculateAll();
+      const valid = GROUPS.map(g => ({ ...g, ...calc[g.id] })).filter(x => Number.isFinite(x.meanRate));
+      valid.sort((a,b) => b.meanRate - a.meanRate);
+      return valid[0] || null;
+    }
+
+    function renderAnalysis() {
+      const calc = calculateAll();
+      const fastest = fastestResult();
+      const chart = makeSvgChart(calc);
+      const evidenceDefault = fastest ? `측정한 세 조건 중 ${fastest.id} 조건(실제 pH ${fastest.ph})의 반응 속도가 ${fastest.meanRate.toFixed(4)} s⁻¹로 가장 컸다.` : '';
+      return `${pageHead('📈', '4. 결과 해석 및 그래프', '그래프에서 pH와 반응 속도의 관계를 확인하고 근거를 적습니다.')}
+        <div class="chart-wrap">${chart}<div class="chart-legend">${GROUPS.map((g,i)=>`<span><i class="legend-dot" style="background:${['#f04438','#12b76a','#2e90fa'][i]}"></i>${g.id}: 실제 pH ${calc[g.id].ph ?? '-'}</span>`).join('')}</div></div>
+        <div class="summary-strip">
+          <div class="summary-box"><span>가설에서 예상한 결과</span><strong>${predictionLabel(state.hypothesis.prediction)}</strong></div>
+          <div class="summary-box"><span>측정한 세 조건 중 가장 빠른 조건</span><strong>${fastest ? `${fastest.id} · pH ${fastest.ph}` : '-'}</strong></div>
+          <div class="summary-box"><span>가장 큰 반응 속도</span><strong>${fastest ? `${fastest.meanRate.toFixed(4)} s⁻¹` : '-'}</strong></div>
+        </div>
+        <div class="notice warn"><b>표현에 주의하세요.</b><br>세 pH 조건만 비교했으므로, 가장 높은 점을 곧바로 카탈레이스의 정확한 ‘최적 pH’라고 단정할 수 없습니다. <b>“측정한 세 조건 중 가장 높았다”</b>라고 표현합니다.</div>
+        <div class="field"><label class="required">실험 결과가 가설을 지지하나요?</label>
+          <div class="choice-grid">
+            ${[['yes','지지한다'],['partial','부분적으로 지지한다'],['no','지지하지 않는다'],['unclear','판단하기 어렵다']].map(([v,t])=>`<label class="choice" style="min-height:58px"><input type="radio" name="supported" value="${v}" ${state.analysis.supported===v?'checked':''}><div><strong>${t}</strong></div></label>`).join('')}
+          </div>
+        </div>
+        <div class="field"><label class="required" for="evidence">수치 근거</label><textarea class="textarea" id="evidence" maxlength="500" placeholder="어느 조건의 실제 pH와 반응 속도가 가장 컸는지 수치로 적으세요.">${safeText(state.analysis.evidence || evidenceDefault)}</textarea><div style="margin-top:8px"><button class="btn btn-soft btn-small" type="button" onclick="fillEvidence()">계산 결과로 문장 채우기</button></div></div>
+        <div class="field"><label class="required" for="explanation">생명과학적 해석</label><textarea class="textarea" id="explanation" maxlength="600" placeholder="pH가 효소 단백질의 구조와 활성 부위에 어떤 영향을 주는지 적으세요.">${safeText(state.analysis.explanation)}</textarea><div style="margin-top:8px"><button class="btn btn-soft btn-small" type="button" onclick="fillExplanation()">해석 문장 도움</button></div></div>
+        <div class="field"><label class="required" for="limitation">실험의 한계 또는 오차 원인 1가지</label>
+          <select class="select" id="limitation">
+            <option value="">선택</option>
+            ${['완충 용액을 사용하지 않아 반응 중 pH가 변했을 수 있다.','거름종이에 묻은 카탈레이스의 양이 매번 달랐을 수 있다.','거름종이를 바닥에 넣거나 시간을 재는 과정에서 사람의 반응 오차가 생겼을 수 있다.','용액의 온도가 조건별로 완전히 같지 않았을 수 있다.','세 가지 pH만 측정하여 정확한 최적 범위를 알기 어렵다.'].map(x=>`<option value="${safeText(x)}" ${state.analysis.limitation===x?'selected':''}>${x}</option>`).join('')}
+          </select>
+        </div>
+        ${footerNav('결론 작성하기', 'saveAnalysis()')}`;
+    }
+
+    function makeSvgChart(calc) {
+      const W = 760, H = 340, L = 64, R = 24, T = 26, B = 56;
+      const plotW = W - L - R, plotH = H - T - B;
+      const points = GROUPS.map((g,i)=>({ id:g.id, ph:calc[g.id].ph, rate:calc[g.id].meanRate, color:['#f04438','#12b76a','#2e90fa'][i] })).filter(p=>Number.isFinite(p.ph)&&Number.isFinite(p.rate)).sort((a,b)=>a.ph-b.ph);
+      const maxRate = Math.max(...points.map(p=>p.rate), 0.01) * 1.15;
+      const x = ph => L + (ph/14)*plotW;
+      const y = rate => T + plotH - (rate/maxRate)*plotH;
+      let grid = '';
+      for (let i=0;i<=7;i++) {
+        const ph=i*2, xx=x(ph);
+        grid += `<line x1="${xx}" y1="${T}" x2="${xx}" y2="${T+plotH}" stroke="#e7ecf3"/><text x="${xx}" y="${T+plotH+24}" text-anchor="middle" font-size="12" fill="#667085">${ph}</text>`;
+      }
+      for (let i=0;i<=4;i++) {
+        const rate=maxRate*i/4, yy=y(rate);
+        grid += `<line x1="${L}" y1="${yy}" x2="${L+plotW}" y2="${yy}" stroke="#e7ecf3"/><text x="${L-10}" y="${yy+4}" text-anchor="end" font-size="11" fill="#667085">${rate.toFixed(3)}</text>`;
+      }
+      const poly = points.length >= 2 ? `<polyline points="${points.map(p=>`${x(p.ph)},${y(p.rate)}`).join(' ')}" fill="none" stroke="#667085" stroke-width="2" stroke-dasharray="6 5"/>` : '';
+      const dots = points.map(p=>`<circle cx="${x(p.ph)}" cy="${y(p.rate)}" r="8" fill="${p.color}" stroke="#fff" stroke-width="3"/><text x="${x(p.ph)}" y="${y(p.rate)-14}" text-anchor="middle" font-weight="800" font-size="13" fill="#344054">${p.id}</text>`).join('');
+      return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="pH에 따른 반응 속도 그래프">${grid}<line x1="${L}" y1="${T+plotH}" x2="${L+plotW}" y2="${T+plotH}" stroke="#344054" stroke-width="2"/><line x1="${L}" y1="${T}" x2="${L}" y2="${T+plotH}" stroke="#344054" stroke-width="2"/>${poly}${dots}<text x="${L+plotW/2}" y="${H-8}" text-anchor="middle" font-weight="800" font-size="14" fill="#344054">실제 pH</text><text x="18" y="${T+plotH/2}" text-anchor="middle" font-weight="800" font-size="14" fill="#344054" transform="rotate(-90 18 ${T+plotH/2})">반응 속도 (s⁻¹)</text></svg>`;
+    }
+
+    function fillEvidence() {
+      const f = fastestResult();
+      if (!f) return;
+      document.getElementById('evidence').value = `측정한 세 조건 중 ${f.id} 조건의 실제 pH는 ${f.ph}였고, 반응 속도는 ${f.meanRate.toFixed(4)} s⁻¹로 가장 컸다.`;
+    }
+
+    function fillExplanation() {
+      document.getElementById('explanation').value = '효소는 단백질이므로 pH가 달라지면 아미노산 사이의 전하와 결합 상태가 변해 입체 구조와 활성 부위의 모양이 달라질 수 있다. 그 결과 기질과 결합하는 정도가 달라져 카탈레이스의 반응 속도에 차이가 나타난 것으로 해석할 수 있다.';
+    }
+
+    function saveAnalysis() {
+      const supported = document.querySelector('input[name="supported"]:checked')?.value || '';
+      const evidence = document.getElementById('evidence').value.trim();
+      const explanation = document.getElementById('explanation').value.trim();
+      const limitation = document.getElementById('limitation').value;
+      if (!supported) return showToast('가설 지지 여부를 선택해 주세요.');
+      if (evidence.length < 15) return showToast('수치 근거를 한 문장 이상 적어 주세요.');
+      if (explanation.length < 20) return showToast('생명과학적 해석을 한 문장 이상 적어 주세요.');
+      if (!limitation) return showToast('실험의 한계 또는 오차 원인을 선택해 주세요.');
+      state.analysis = { supported, evidence, explanation, limitation };
+      if (!state.conclusion) state.conclusion = makeConclusionDraft();
+      state.step = 6;
+      saveLocal();
+      render();
+    }
+
+    function makeConclusionDraft() {
+      const f = fastestResult();
+      const supportText = ({ yes:'지지하였다', partial:'부분적으로 지지하였다', no:'지지하지 않았다', unclear:'명확히 판단하기 어려웠다' })[state.analysis.supported] || '검토하였다';
+      if (!f) return '';
+      return `실험 결과, 측정한 세 pH 조건 중 ${f.id} 조건(실제 pH ${f.ph})에서 반응 속도가 ${f.meanRate.toFixed(4)} s⁻¹로 가장 컸다. 이 결과는 나의 가설을 ${supportText}. pH가 달라지면 카탈레이스 단백질의 입체 구조와 활성 부위가 변할 수 있어 반응 속도에 차이가 생긴 것으로 해석하였다. 다만 ${state.analysis.limitation} 따라서 카탈레이스의 정확한 최적 pH를 판단하려면 더 촘촘한 pH 간격과 완충 용액을 사용하여 추가로 측정해야 한다.`;
+    }
+
+    function renderConclusion() {
+      const f = fastestResult();
+      return `${pageHead('✅', '5. 결론 도출 및 제출', '결과, 근거, 해석, 한계가 들어가도록 최종 결론을 완성합니다.')}
+        <div class="notice good"><b>결론 체크</b>　① 어느 조건에서 빨랐는가　② 수치 근거는 무엇인가　③ 왜 그런가　④ 실험의 한계는 무엇인가</div>
+        <div class="summary-strip">
+          <div class="summary-box"><span>가장 빠른 조건</span><strong>${f?`${f.id} · pH ${f.ph}`:'-'}</strong></div>
+          <div class="summary-box"><span>반응 속도</span><strong>${f?`${f.meanRate.toFixed(4)} s⁻¹`:'-'}</strong></div>
+          <div class="summary-box"><span>현재 제출 상태</span><strong>${state.submitted?'제출 완료':'작성 중'}</strong></div>
+        </div>
+        <div class="field"><label class="required" for="conclusion">최종 결론</label><textarea class="textarea" id="conclusion" style="min-height:210px" maxlength="1200">${safeText(state.conclusion || makeConclusionDraft())}</textarea></div>
+        <div class="notice info"><b>제출 후에도 같은 기기에서는 내용을 다시 열어 볼 수 있습니다.</b><br>교사 화면에는 현재 단계, 제출 여부, 실험값, 해석과 결론이 저장됩니다.</div>
+        <div class="footer-nav">
+          <button class="btn btn-soft" type="button" onclick="goBack()">← 이전 단계</button>
+          <div class="right"><button class="btn btn-soft" type="button" onclick="copySummary()">📋 내용 복사</button><button class="btn btn-primary" id="submitBtn" type="button" onclick="submitFinal()">${state.submitted?'다시 제출하기':'최종 제출하기'} →</button></div>
+        </div>`;
+    }
+
+    async function submitFinal() {
+      const conclusion = document.getElementById('conclusion').value.trim();
+      if (conclusion.length < 50) return showToast('결론을 두세 문장으로 작성해 주세요. 결과와 간단한 해석을 포함해야 합니다.');
+      state.conclusion = conclusion;
+      state.submitted = true;
+      saveLocal();
+      const btn = document.getElementById('submitBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '제출 중…'; }
+      const result = await syncToServer(true);
+      if (result.ok) {
+        showToast('제출되었습니다. 수고했습니다! 🎉', 4000);
+      } else if (result.localOnly) {
+        showToast('이 기기에는 저장됐지만 교사 서버가 아직 연결되지 않았습니다.', 5000);
+      }
+      render();
+    }
+
+    async function copySummary() {
+      const calc = calculateAll();
+      const text = [
+        `[카탈레이스 효소 반응 속도 탐구]`,
+        `${state.student.className}반 ${state.student.studentNo}번 ${state.student.name}`,
+        `가설: ${predictionLabel(state.hypothesis.prediction)} / ${state.hypothesis.reason}`,
+        ...GROUPS.map(g=>`${g.id} 조건 실제 pH ${calc[g.id].ph}, 측정 시간 ${calc[g.id].meanTime?.toFixed(2)} s, 평균 속도 ${calc[g.id].meanRate?.toFixed(4)} s^-1`),
+        `결론: ${document.getElementById('conclusion')?.value || state.conclusion}`
+      ].join('\n');
+      try { await navigator.clipboard.writeText(text); showToast('활동 내용이 복사되었습니다.'); }
+      catch { showToast('복사 권한이 없어 실패했습니다.'); }
+    }
+
+    function goBack() {
+      captureCurrentInputs();
+      if (state.step > 1) state.step--;
+      saveLocal();
+      render();
+    }
+
+    function captureCurrentInputs() {
+      try {
+        if (state.step === 2) {
+          state.hypothesis.prediction = document.querySelector('input[name="prediction"]:checked')?.value || state.hypothesis.prediction;
+          state.hypothesis.reason = document.getElementById('hypothesisReason')?.value.trim() ?? state.hypothesis.reason;
+        } else if (state.step === 3) {
+          state.design.independent = document.getElementById('independent')?.value || state.design.independent;
+          state.design.dependent = document.getElementById('dependent')?.value || state.design.dependent;
+          state.design.controls = [...document.querySelectorAll('input[name="control"]:checked')].map(x=>x.value);
+          for (const g of GROUPS) {
+            const v = Number(document.getElementById(`target-${g.id}`)?.value);
+            if (Number.isFinite(v)) state.design.targets[g.id] = v;
+          }
+        } else if (state.step === 4) {
+          const raw = readResultsFromInputs();
+          for (const g of GROUPS) {
+            state.results[g.id].actualPh = raw[g.id].actualPh;
+            state.results[g.id].trials = raw[g.id].trials;
+          }
+        } else if (state.step === 5) {
+          state.analysis.supported = document.querySelector('input[name="supported"]:checked')?.value || state.analysis.supported;
+          state.analysis.evidence = document.getElementById('evidence')?.value.trim() ?? state.analysis.evidence;
+          state.analysis.explanation = document.getElementById('explanation')?.value.trim() ?? state.analysis.explanation;
+          state.analysis.limitation = document.getElementById('limitation')?.value || state.analysis.limitation;
+        } else if (state.step === 6) {
+          state.conclusion = document.getElementById('conclusion')?.value.trim() ?? state.conclusion;
         }
+      } catch (e) { console.warn('capture failed', e); }
+    }
 
-        function normalizeStudentData(raw) {
-            const base = getInitialState();
-            if (!raw || typeof raw !== 'object') return base;
+    function resetActivity(force = false) {
+      if (!force && !confirm('이 기기에 저장된 활동 내용을 모두 지우고 처음부터 시작할까요?')) return;
+      localStorage.removeItem(CONFIG.STORAGE_KEY);
+      state = initialState();
+      setSyncStatus('local', '이 기기에 자동 저장');
+      render();
+      showToast('활동지가 초기화되었습니다.');
+    }
 
-            const step = Number(raw.currentStep);
-            base.name = typeof raw.name === 'string' ? raw.name : '';
-            base.currentStep = Number.isInteger(step) && step >= 1 && step <= 6 ? step : 1;
-            base.hypothesis = typeof raw.hypothesis === 'string' ? raw.hypothesis : '';
-            base.conclusion = typeof raw.conclusion === 'string' ? raw.conclusion : '';
-            base.isSubmitted = raw.isSubmitted === true;
+    window.addEventListener('online', () => { setSyncStatus('saving','재연결 · 저장 확인 중…'); syncToServer(false); });
+    window.addEventListener('offline', () => setSyncStatus('offline','오프라인 · 기기에 저장'));
+    window.addEventListener('beforeunload', captureCurrentInputs);
 
-            if (raw.variables && typeof raw.variables === 'object') {
-                base.variables.independent = typeof raw.variables.independent === 'string' ? raw.variables.independent : '';
-                base.variables.dependent = typeof raw.variables.dependent === 'string' ? raw.variables.dependent : '';
-                base.variables.controlled = Array.isArray(raw.variables.controlled) ? raw.variables.controlled : [];
-            }
-
-            ['a', 'b', 'c'].forEach(key => {
-                const item = raw.expData && raw.expData[key] ? raw.expData[key] : {};
-                base.expData[key] = {
-                    ph: item.ph === '' || item.ph == null ? '' : Number(item.ph),
-                    time: item.time === '' || item.time == null ? '' : Number(item.time)
-                };
-                if (!Number.isFinite(base.expData[key].ph)) base.expData[key].ph = '';
-                if (!Number.isFinite(base.expData[key].time)) base.expData[key].time = '';
-            });
-
-            return base;
-        }
-
-        function showFatalError(error) {
-            console.error('앱 초기화 오류:', error);
-            const main = document.getElementById('main-card');
-            if (!main) return;
-            main.innerHTML = `
-                <div style="padding:32px;text-align:center">
-                    <h2 style="font-size:20px;font-weight:700;margin-bottom:10px">화면을 불러오지 못했습니다.</h2>
-                    <p style="font-size:14px;color:#64748b;margin-bottom:18px">브라우저의 이전 저장 데이터나 외부 라이브러리 로딩 문제일 수 있습니다.</p>
-                    <button onclick="clearAllDataAndReset()" style="border:0;border-radius:10px;padding:11px 16px;background:#f59e0b;color:white;font-weight:700;cursor:pointer">저장 데이터 비우고 다시 시작</button>
-                </div>`;
-        }
-
-        // 무결성 기준 기본 상태 정의
-        function getInitialState() {
-            return {
-                name: '', 
-                currentStep: 1,
-                hypothesis: '',
-                variables: { independent: '', dependent: '', controlled: [] },
-                expData: {
-                    a: { ph: '', time: '' },
-                    b: { ph: '', time: '' },
-                    c: { ph: '', time: '' }
-                },
-                conclusion: '', 
-                isSubmitted: false
-            };
-        }
-
-        let studentData = getInitialState();
-        const totalSteps = 6;
-        let myChart = null;
-
-        // 변인 선택지 풀
-        const variableOptions = [
-            { id: 'v1', text: '용액의 pH (산성, 중성, 염기성)', type: 'ind' },
-            { id: 'v2', text: '거름종이가 수면으로 떠오르는 시간', type: 'dep' },
-            { id: 'v3', text: '카탈레이스(감자즙)의 농도 및 양', type: 'con' },
-            { id: 'v4', text: '과산화수소수의 부피 및 농도', type: 'con' },
-            { id: 'v5', text: '실험 장소의 전체 온도', type: 'con' }
-        ];
-        let selectedVariableIds = { independent: null, dependent: null, controlled: [] };
-
-        // 안전한 페이지 초기 구동 (GitHub Pages에서도 반드시 한 번 실행)
-        function initApp() {
-            try {
-                const saved = localStorage.getItem('enzyme_student_data');
-                studentData = saved ? normalizeStudentData(JSON.parse(saved)) : getInitialState();
-                localStorage.setItem('enzyme_student_data', JSON.stringify(studentData));
-                renderStep();
-            } catch(e) {
-                studentData = getInitialState();
-                try {
-                    localStorage.removeItem('enzyme_student_data');
-                } catch (_) {}
-                showFatalError(e);
-            }
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp, { once: true });
-        } else {
-            initApp();
-        }
-
-        // 수동 초기화 버튼 (오류 자가 치료용)
-        function clearAllDataAndReset() {
-            if(confirm("모든 활동 기록을 다 지우고 1단계로 새로 시작하시겠습니까?")) {
-                localStorage.removeItem('enzyme_student_data');
-                studentData = getInitialState();
-                selectedVariableIds = { independent: null, dependent: null, controlled: [] };
-                renderStep();
-            }
-        }
-
-        function saveData() {
-            try {
-                localStorage.setItem('enzyme_student_data', JSON.stringify(studentData));
-            } catch(e) {
-                console.error("데이터 로컬 저장 실패", e);
-            }
-        }
-
-        function updateIndicators() {
-            for(let i=1; i<=totalSteps; i++) {
-                const ind = document.getElementById(`ind-${i}`);
-                if(!ind) continue;
-                const circle = ind.querySelector('span:first-child');
-                const text = ind.querySelector('span:last-child');
-                if(i === studentData.currentStep) {
-                    circle.className = "w-8 h-8 rounded-full flex items-center justify-center font-bold step-active";
-                    text.className = "text-sm font-semibold text-slate-800";
-                } else if(i < studentData.currentStep) {
-                    circle.className = "w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold";
-                    text.className = "text-sm font-medium text-slate-600";
-                } else {
-                    circle.className = "w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400";
-                    text.className = "text-sm font-medium text-slate-400";
-                }
-            }
-        }
-
-        function nextStep() {
-            if(studentData.currentStep < totalSteps) {
-                studentData.currentStep++;
-                saveData();
-                renderStep();
-            }
-        }
-
-        function prevStep() {
-            if(studentData.currentStep > 1) {
-                studentData.currentStep--;
-                saveData();
-                renderStep();
-            }
-        }
-
-        function renderStep() {
-            try {
-                updateIndicators();
-                const main = document.getElementById('main-card');
-                if(!main) return;
-                
-                let html = `<div class="flex-1">`;
-                
-                switch(studentData.currentStep) {
-                    case 1:
-                        html += `
-                            <div class="max-w-xl mx-auto text-center py-8">
-                                <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">실험실 안전 및 인적사항</span>
-                                <h2 class="text-2xl font-bold text-slate-900 mt-3 mb-2">실험 활동지 시작하기</h2>
-                                <p class="text-slate-500 text-sm mb-8">모둠원 대표의 학번과 이름을 입력하고 탐구를 시작해 주세요.</p>
-                                <div class="text-left bg-slate-50 p-6 rounded-2xl border border-slate-200/60 mb-6">
-                                    <label class="block text-xs font-bold text-slate-600 uppercase mb-2">학번과 이름 입력</label>
-                                    <input type="text" id="stuName" value="${escapeHtml(studentData.name || '')}" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-500 font-medium placeholder-slate-400 shadow-sm" placeholder="예) 20101 홍길동">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex justify-end pt-6 border-t mt-6">
-                            <button onclick="saveStep1()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2 shadow-sm">다음 단계로 <i class="fa-solid fa-arrow-right"></i></button>
-                        </div>`;
-                        main.innerHTML = html;
-                        break;
-
-                    case 2:
-                        html += `
-                            <div class="mb-4">
-                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-lightbulb text-amber-500"></i> [1단계] 탐구 가설 설정하기</h2>
-                                <p class="text-sm text-slate-500 mt-1">실험을 통해 확인하고 싶은 핵심 가설을 문장으로 완성해 봅시다.</p>
-                            </div>
-                            <div class="bg-amber-50/50 border border-amber-200/70 rounded-2xl p-5 my-6">
-                                <h3 class="text-sm font-bold text-amber-800 flex items-center gap-1.5 mb-2"><i class="fa-solid fa-circle-info"></i> 가설 작성 팁</h3>
-                                <p class="text-xs text-amber-700 leading-relaxed">독립변인(pH 환경 변화)과 종속변인(카탈레이스의 효소 반응 속도)이 뚜렷하게 드러나도록 빈칸을 터치하여 알맞은 단어를 선택해 주세요.</p>
-                            </div>
-                            <div class="bg-slate-50 p-6 rounded-2xl border text-center text-base md:text-lg font-medium py-10 text-slate-700">
-                                " 용액의 <span class="font-bold text-indigo-600">pH(산성/중성/염기성) 환경</span>이 변하면, 카탈레이스 효소의 반응 속도(거름종이가 떠오르는 속도)는 
-                                <select id="hypoSelect" class="bg-white border-2 border-indigo-500 rounded-lg px-2 py-1 mx-1 text-slate-900 font-bold focus:outline-none">
-                                    <option value="" ${studentData.hypothesis===''? 'selected':''}>-- 선택 --</option>
-                                    <option value="변할 것이다" ${studentData.hypothesis==='변할 것이다'? 'selected':''}>변할 것이다 (영향이 있을 것이다)</option>
-                                    <option value="일정할 것이다" ${studentData.hypothesis==='일정할 것이다'? 'selected':''}>일정할 것이다 (영향이 없을 것이다)</option>
-                                </select> 
-                                ."
-                            </div>
-                        </div>
-                        <div class="flex justify-between pt-6 border-t mt-6">
-                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
-                            <button onclick="saveStep2()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">다음 단계로 <i class="fa-solid fa-arrow-right"></i></button>
-                        </div>`;
-                        main.innerHTML = html;
-                        break;
-
-                    case 3:
-                        html += `
-                            <div class="mb-4">
-                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-gears text-indigo-500"></i> [2단계] 변인 설정 및 실험 설계</h2>
-                                <p class="text-sm text-slate-500 mt-1">준비된 요소를 알맞은 변인 칸에 **터치하여** 넣어주세요. 조건이 완성되면 아래에 맞춤형 실험 과정 가이드가 생성됩니다.</p>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
-                                <div class="md:col-span-1 bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
-                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">설정 가능한 변인 카드</h3>
-                                    <div class="space-y-2" id="poolZone"></div>
-                                </div>
-                                <div class="md:col-span-2 space-y-4">
-                                    <div class="p-4 rounded-xl border flex items-center justify-between bg-white" id="slot-ind">
-                                        <div>
-                                            <h4 class="text-sm font-bold text-slate-900"><span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>독립 변인 (조작 변인)</h4>
-                                            <p class="text-xs text-slate-400 mt-0.5">우리가 의도적으로 변화시키는 조건</p>
-                                        </div>
-                                        <div class="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100" id="slot-ind-text">선택 대기 중</div>
-                                    </div>
-                                    <div class="p-4 rounded-xl border flex items-center justify-between bg-white" id="slot-dep">
-                                        <div>
-                                            <h4 class="text-sm font-bold text-slate-900"><span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1.5"></span>종속 변인 (결과 측정)</h4>
-                                            <p class="text-xs text-slate-400 mt-0.5">독립변인에 따라 변해서 측정해야 하는 값</p>
-                                        </div>
-                                        <div class="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-xl border border-red-100" id="slot-dep-text">선택 대기 중</div>
-                                    </div>
-                                    <div class="p-4 rounded-xl border bg-white">
-                                        <h4 class="text-sm font-bold text-slate-900 mb-1"><span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1.5"></span>통제 변인 (일정하게 유지할 조건)</h4>
-                                        <div class="flex flex-wrap gap-2 mt-2" id="slot-con-zone">
-                                            <span class="text-xs text-slate-400 italic">왼쪽에서 통제할 변인 카드를 터치해 추가하세요.</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="processGuide" class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-5 hidden">
-                                <h3 class="text-sm font-bold text-indigo-900 mb-2"><i class="fa-solid fa-clipboard-list mr-1"></i> [자동 생성] 우리 조의 실전 실험 가이드</h3>
-                                <ul class="text-xs text-indigo-800 space-y-2 list-disc pl-4 leading-relaxed">
-                                    <li><strong>시험관 준비:</strong> 시험관 3개(A, B, C)를 준비하고 각각 카탈레이스 효소(감자즙 등)를 동일한 양으로 넣습니다.</li>
-                                    <li><strong>조건 설정:</strong> A에는 염산(산성), B에는 증류수(중성), C에는 수산화나트륨(염기성) 용액을 떨어뜨려 pH를 다르게 조작합니다.</li>
-                                    <li><strong>반응 유도:</strong> 각 시험관에 과산화수소수를 넣고, 거름종이를 집게로 집어 바닥까지 가라앉힙니다.</li>
-                                    <li><strong>측정 기준:</strong> 거름종이가 산소 기체 발생으로 인해 <strong>수면 위로 완전히 떠오르는 시간(초)</strong>을 정밀하게 측정하세요.</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="flex justify-between pt-6 border-t mt-6">
-                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
-                            <button onclick="saveStep3()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">다음 단계로 <i class="fa-solid fa-arrow-right"></i></button>
-                        </div>`;
-                        main.innerHTML = html;
-                        renderVariables();
-                        break;
-
-                    case 4:
-                        html += `
-                            <div class="mb-4">
-                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-stopwatch text-emerald-500"></i> [3단계] 실제 실험 측정 및 데이터 기록</h2>
-                                <p class="text-sm text-slate-500 mt-1">테이블에서 실제 pH 측정기로 잰 수치와 거름종이가 뜨는 데 걸린 시간(초)을 직접 입력하세요.</p>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
-                                <div class="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <span class="bg-red-50 text-red-600 text-xs font-bold px-2.5 py-1 rounded-lg">시험관 A (산성 환경)</span>
-                                    </div>
-                                    <div class="space-y-4">
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-500 mb-1">실측 pH (숫자만 입력)</label>
-                                            <input type="number" step="0.1" id="ph-a" value="${studentData.expData.a.ph || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 2.5">
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-500 mb-1">떠오른 시간 (초)</label>
-                                            <input type="number" step="0.1" id="time-a" value="${studentData.expData.a.time || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 45">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <span class="bg-green-50 text-green-600 text-xs font-bold px-2.5 py-1 rounded-lg">시험관 B (중성 환경)</span>
-                                    </div>
-                                    <div class="space-y-4">
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-500 mb-1">실측 pH (숫자만 입력)</label>
-                                            <input type="number" step="0.1" id="ph-b" value="${studentData.expData.b.ph || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 7.0">
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-500 mb-1">떠오른 시간 (초)</label>
-                                            <input type="number" step="0.1" id="time-b" value="${studentData.expData.b.time || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 8">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <span class="bg-blue-50 text-blue-600 text-xs font-bold px-2.5 py-1 rounded-lg">시험관 C (염기성 환경)</span>
-                                    </div>
-                                    <div class="space-y-4">
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-500 mb-1">실측 pH (숫자만 입력)</label>
-                                            <input type="number" step="0.1" id="ph-c" value="${studentData.expData.c.ph || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 11.8">
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-500 mb-1">떠오른 시간 (초)</label>
-                                            <input type="number" step="0.1" id="time-c" value="${studentData.expData.c.time || ''}" class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-emerald-500" placeholder="예: 32">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="bg-slate-50 p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
-                                <span class="font-medium"><i class="fa-solid fa-stopwatch text-indigo-500 mr-1"></i> 디벗 보조 타이머 (실험 시 활용 가능)</span>
-                                <div class="flex items-center gap-3">
-                                    <span id="stopwatch-display" class="font-mono text-lg font-bold bg-white border px-3 py-1 rounded-lg">00:00.0</span>
-                                    <button onclick="toggleStopwatch()" id="sw-btn" class="bg-indigo-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-indigo-700">시작</button>
-                                    <button onclick="resetStopwatch()" class="bg-slate-200 text-slate-700 px-3 py-1 rounded-lg font-medium hover:bg-slate-300">리셋</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex justify-between pt-6 border-t mt-6">
-                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
-                            <button onclick="saveStep4()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">데이터 분석하기 <i class="fa-solid fa-arrow-right"></i></button>
-                        </div>`;
-                        main.innerHTML = html;
-                        break;
-
-                    case 5:
-                        html += `
-                            <div class="mb-4">
-                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-500"></i> [4단계] 데이터 해석 및 그래프 시각화</h2>
-                                <p class="text-sm text-slate-500 mt-1">직접 입력한 데이터가 실시간으로 변환되어 반응 속도 그래프로 표출됩니다.</p>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6 items-center">
-                                <div class="md:col-span-2 bg-white border p-4 rounded-2xl shadow-sm">
-                                    <canvas id="speedChart" class="w-full max-h-[300px]"></canvas>
-                                </div>
-                                <div class="md:col-span-1 space-y-4">
-                                    <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl text-xs leading-relaxed text-indigo-900">
-                                        <h4 class="font-bold text-sm text-indigo-950 mb-1"><i class="fa-solid fa-calculator"></i> 과학적 원리 안내</h4>
-                                        거름종이가 떠오르는 <strong>시간($t$)의 역수($1/t$)</strong>는 단위 시간당 일어나는 반응량인 <strong>'효소의 반응 속도'</strong>를 나타내게 됩니다. 즉, 역수 값이 클수록 효소가 활발하게 작용하고 있음을 의미합니다!
-                                    </div>
-                                    <div class="border rounded-2xl p-4 bg-slate-50 text-xs space-y-2">
-                                        <h4 class="font-bold text-slate-700">우리 조의 계산된 반응 속도 ($1/t$)</h4>
-                                        <div class="flex justify-between"><span>시험관 A:</span><span class="font-bold" id="calc-a">0</span></div>
-                                        <div class="flex justify-between"><span>시험관 B:</span><span class="font-bold text-emerald-600" id="calc-b">0</span></div>
-                                        <div class="flex justify-between"><span>시험관 C:</span><span class="font-bold" id="calc-c">0</span></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex justify-between pt-6 border-t mt-6">
-                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
-                            <button onclick="nextStep()" class="bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition flex items-center gap-2">최종 결론 작성 <i class="fa-solid fa-arrow-right"></i></button>
-                        </div>`;
-                        main.innerHTML = html;
-                        setTimeout(initChart, 50);
-                        break;
-
-                    case 6:
-                        html += `
-                            <div class="mb-4">
-                                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-square-check text-emerald-500"></i> [5단계] 결론 도출 및 탐구 활동지 제출</h2>
-                                <p class="text-sm text-slate-500 mt-1">그래프의 경향성을 보고 알게 된 카탈레이스의 최적 pH 조건을 요약하여 최종 제출해 주세요.</p>
-                            </div>
-                            <div class="space-y-4 my-6">
-                                <div class="bg-slate-50 p-5 rounded-2xl border">
-                                    <label class="block text-sm font-bold text-slate-700 mb-2">Q. 실험 결과 분석을 통해 내린 최종 결론을 자유롭게 서술하세요.</label>
-                                    <textarea id="conclusionText" class="w-full border rounded-xl p-4 text-sm focus:outline-emerald-500 min-h-[120px]" placeholder="예) 실험 결과 카탈레이스 효소는 중성 환경(pH 7 부근)인 시험관 B에서 반응속도(1/t)가 가장 높게 나타났다. 따라서 카탈레이스의 최적 pH는 중성 범위임을 알 수 있다.">${escapeHtml(studentData.conclusion || '')}</textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex justify-between pt-6 border-t mt-6">
-                            <button onclick="prevStep()" class="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-200 transition"><i class="fa-solid fa-arrow-left mr-1"></i> 이전</button>
-                            <button onclick="submitFinal()" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-indigo-700 transition flex items-center gap-2 shadow-md shadow-indigo-100"><i class="fa-solid fa-paper-plane"></i> 서버로 제출하기</button>
-                        </div>`;
-                        main.innerHTML = html;
-                        break;
-                }
-            } catch(e) {
-                console.error("렌더링 도중 예외가 발생했습니다:", e);
-                const main = document.getElementById('main-card');
-                if (main) {
-                    main.innerHTML = `
-                        <div class="p-6 text-center">
-                            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-3xl mb-2"></i>
-                            <h4 class="font-bold text-slate-800">이전 활동 기록 버전 충돌 감지</h4>
-                            <p class="text-xs text-slate-500 mt-1 mb-4">새로운 버전 업그레이드로 인해 브라우저의 옛날 캐시 데이터와 충돌이 일어났습니다.</p>
-                            <button onclick="clearAllDataAndReset()" class="bg-amber-500 text-white px-4 py-2 rounded-xl text-xs font-bold">임시 저장 비우고 다시 열기</button>
-                        </div>`;
-                }
-            }
-        }
-
-        function saveStep1() {
-            const input = document.getElementById('stuName');
-            const val = input ? input.value.trim() : "";
-            if(!val) { alert('학번과 이름을 적어주세요.'); return; }
-            studentData.name = val;
-            nextStep();
-        }
-
-        function saveStep2() {
-            const select = document.getElementById('hypoSelect');
-            if(!select || !select.value) { alert('빈칸의 결론 예측을 골라주세요.'); return; }
-            studentData.hypothesis = select.value;
-            nextStep();
-        }
-
-        function renderVariables() {
-            const pool = document.getElementById('poolZone');
-            const indText = document.getElementById('slot-ind-text');
-            const depText = document.getElementById('slot-dep-text');
-            const conZone = document.getElementById('slot-con-zone');
-            const guide = document.getElementById('processGuide');
-
-            if(!pool || !indText || !depText || !conZone) return;
-
-            pool.innerHTML = '';
-            variableOptions.forEach(v => {
-                let isUsed = (selectedVariableIds.independent === v.id || selectedVariableIds.dependent === v.id || selectedVariableIds.controlled.includes(v.id));
-                if(!isUsed) {
-                    pool.innerHTML += `<div onclick="selectVariable('${v.id}')" class="variable-card bg-white border p-2.5 rounded-xl text-xs font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50/30 border-slate-200 shadow-sm">${v.text}</div>`;
-                }
-            });
-
-            if(selectedVariableIds.independent) {
-                const item = variableOptions.find(v => v.id === selectedVariableIds.independent);
-                indText.innerHTML = `${item.text} <i class="fa-solid fa-circle-xmark ml-1.5 text-slate-400 cursor-pointer" onclick="removeVariable('ind')"></i>`;
-                indText.className = "text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200";
-            } else {
-                indText.innerText = '선택 대기 중';
-                indText.className = "text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-dashed";
-            }
-
-            if(selectedVariableIds.dependent) {
-                const item = variableOptions.find(v => v.id === selectedVariableIds.dependent);
-                depText.innerHTML = `${item.text} <i class="fa-solid fa-circle-xmark ml-1.5 text-slate-400 cursor-pointer" onclick="removeVariable('dep')"></i>`;
-                depText.className = "text-xs font-semibold text-red-700 bg-red-50 px-3 py-1.5 rounded-xl border border-red-200";
-            } else {
-                depText.innerText = '선택 대기 중';
-                depText.className = "text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-dashed";
-            }
-
-            if(selectedVariableIds.controlled.length > 0) {
-                conZone.innerHTML = '';
-                selectedVariableIds.controlled.forEach(id => {
-                    const item = variableOptions.find(v => v.id === id);
-                    conZone.innerHTML += `<span class="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">${item.text} <i class="fa-solid fa-circle-xmark text-slate-400 cursor-pointer hover:text-slate-600" onclick="removeConVariable('${id}')"></i></span>`;
-                });
-            } else {
-                conZone.innerHTML = '<span class="text-xs text-slate-400 italic">왼쪽 카드를 터치하여 채워주세요.</span>';
-            }
-
-            if(selectedVariableIds.independent === 'v1' && selectedVariableIds.dependent === 'v2') {
-                if(guide) guide.classList.remove('hidden');
-                studentData.variables.independent = '용액의 pH 환경';
-                studentData.variables.dependent = '거름종이가 뜨는 시간';
-            } else {
-                if(guide) guide.classList.add('hidden');
-            }
-        }
-
-        function selectVariable(id) {
-            const item = variableOptions.find(v => v.id === id);
-            if(item.type === 'ind' && !selectedVariableIds.independent) {
-                selectedVariableIds.independent = id;
-            } else if(item.type === 'dep' && !selectedVariableIds.dependent) {
-                selectedVariableIds.dependent = id;
-            } else {
-                if(!selectedVariableIds.controlled.includes(id)) {
-                    selectedVariableIds.controlled.push(id);
-                }
-            }
-            renderVariables();
-        }
-
-        function removeVariable(type) {
-            if(type === 'ind') selectedVariableIds.independent = null;
-            if(type === 'dep') selectedVariableIds.dependent = null;
-            renderVariables();
-        }
-
-        function removeConVariable(id) {
-            selectedVariableIds.controlled = selectedVariableIds.controlled.filter(x => x !== id);
-            renderVariables();
-        }
-
-        function saveStep3() {
-            if(selectedVariableIds.independent !== 'v1' || selectedVariableIds.dependent !== 'v2') {
-                alert('생명과학적 독립변인과 종속변인 배치가 올바르지 않습니다. 다시 검토하세요!');
-                return;
-            }
-            studentData.variables = {
-                independent: '용액의 pH 환경',
-                dependent: '거름종이가 뜨는 시간',
-                controlled: selectedVariableIds.controlled.map(id => {
-                    const item = variableOptions.find(v => v.id === id);
-                    return item ? item.text : id;
-                })
-            };
-            saveData();
-            nextStep();
-        }
-
-        function saveStep4() {
-            const phA = document.getElementById('ph-a').value;
-            const tA = document.getElementById('time-a').value;
-            const phB = document.getElementById('ph-b').value;
-            const tB = document.getElementById('time-b').value;
-            const phC = document.getElementById('ph-c').value;
-            const tC = document.getElementById('time-c').value;
-
-            if(!phA || !tA || !phB || !tB || !phC || !tC) {
-                alert('A, B, C 모든 시험관의 측정값(pH 및 시간)을 숫자로 입력해야 넘어갈 수 있습니다.');
-                return;
-            }
-
-            studentData.expData.a = { ph: parseFloat(phA), time: parseFloat(tA) };
-            studentData.expData.b = { ph: parseFloat(phB), time: parseFloat(tB) };
-            studentData.expData.c = { ph: parseFloat(phC), time: parseFloat(tC) };
-            saveData();
-            nextStep();
-        }
-
-        function initChart() {
-            const tA = studentData.expData.a.time;
-            const tB = studentData.expData.b.time;
-            const tC = studentData.expData.c.time;
-
-            const rateA = tA > 0 ? (1 / tA).toFixed(4) : 0;
-            const rateB = tB > 0 ? (1 / tB).toFixed(4) : 0;
-            const rateC = tC > 0 ? (1 / tC).toFixed(4) : 0;
-
-            const elA = document.getElementById('calc-a');
-            const elB = document.getElementById('calc-b');
-            const elC = document.getElementById('calc-c');
-            if(elA) elA.innerText = `${rateA} /s`;
-            if(elB) elB.innerText = `${rateB} /s`;
-            if(elC) elC.innerText = `${rateC} /s`;
-
-            const canvas = document.getElementById('speedChart');
-            if(!canvas) return;
-
-            if (typeof Chart === 'undefined') {
-                const box = canvas.parentElement;
-                if (box) {
-                    box.innerHTML = `
-                        <div class="p-6 text-center">
-                            <p class="font-bold text-slate-800 mb-2">그래프 라이브러리를 불러오지 못했습니다.</p>
-                            <p class="text-xs text-slate-500">학교 네트워크에서 jsDelivr가 차단되었을 수 있습니다. 계산값은 오른쪽에서 확인할 수 있습니다.</p>
-                        </div>`;
-                }
-                return;
-            }
-
-            const ctx = canvas.getContext('2d');
-            if(myChart) myChart.destroy();
-
-            const dataPoints = [
-                { x: studentData.expData.a.ph, y: parseFloat(rateA) },
-                { x: studentData.expData.b.ph, y: parseFloat(rateB) },
-                { x: studentData.expData.c.ph, y: parseFloat(rateC) }
-            ].sort((a,b) => a.x - b.x);
-
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: [{
-                        label: '효소 반응 속도 (1/t)',
-                        data: dataPoints,
-                        backgroundColor: '#6366F1',
-                        borderColor: '#6366F1',
-                        borderWidth: 2,
-                        pointRadius: 6,
-                        pointHoverRadius: 8,
-                        tension: 0.2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        x: { type: 'linear', title: { display: true, text: '실측 pH', font: { weight: 'bold' } }, min: 0, max: 14 },
-                        y: { title: { display: true, text: '반응 속도 (1/시간)', font: { weight: 'bold' } }, beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        function submitFinal() {
-            const area = document.getElementById('conclusionText');
-            const txt = area ? area.value.trim() : "";
-            if(!txt) { alert('최종 결론 분석을 한 문장이라도 작성해 주세요.'); return; }
-            studentData.conclusion = txt;
-            studentData.isSubmitted = true;
-            saveData();
-            alert('🎉 데이터가 성공적으로 서버에 기록되었습니다! 수고하셨습니다.');
-            studentData.currentStep = 1;
-            saveData();
-            renderStep();
-        }
-
-        let timerInterval = null;
-        let startTime = 0;
-        let elapsed = 0;
-        function toggleStopwatch() {
-            const btn = document.getElementById('sw-btn');
-            if(!timerInterval) {
-                startTime = Date.now() - elapsed;
-                timerInterval = setInterval(() => {
-                    elapsed = Date.now() - startTime;
-                    const min = String(Math.floor(elapsed / 60000)).padStart(2, '0');
-                    const sec = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
-                    const ms = String(Math.floor((elapsed % 1000) / 100)).padStart(1, '0');
-                    const display = document.getElementById('stopwatch-display');
-                    if(display) display.innerText = `${min}:${sec}.${ms}`;
-                }, 100);
-                if(btn) {
-                    btn.innerText = '정지';
-                    btn.className = 'bg-red-500 text-white px-3 py-1 rounded-lg font-medium hover:bg-red-600';
-                }
-            } else {
-                clearInterval(timerInterval);
-                timerInterval = null;
-                if(btn) {
-                    btn.innerText = '시작';
-                    btn.className = 'bg-indigo-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-indigo-700';
-                }
-            }
-        }
-        function resetStopwatch() {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            elapsed = 0;
-            const display = document.getElementById('stopwatch-display');
-            if(display) display.innerText = '00:00.0';
-            const btn = document.getElementById('sw-btn');
-            if(btn) {
-                btn.innerText = '시작';
-                btn.className = 'bg-indigo-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-indigo-700';
-            }
-        }
-
-        function toggleDashboard() {
-            const modal = document.getElementById('dashModal');
-            if(!modal) return;
-            modal.classList.toggle('hidden');
-            if(!modal.classList.contains('hidden')) {
-                document.getElementById('authZone').classList.remove('hidden');
-                document.getElementById('dashContent').classList.add('hidden');
-                const pwInput = document.getElementById('dashPw');
-                if(pwInput) pwInput.value = '';
-            }
-        }
-
-        function checkPw() {
-            const pwInput = document.getElementById('dashPw');
-            const pw = pwInput ? pwInput.value : '';
-            if(pw === 'science') {
-                const auth = document.getElementById('authZone');
-                const content = document.getElementById('dashContent');
-                if(auth) auth.classList.add('hidden');
-                if(content) content.classList.remove('hidden');
-                buildDashboardData();
-            } else {
-                alert('비밀번호가 일치하지 않습니다.');
-            }
-        }
-
-        function buildDashboardData() {
-            const tbody = document.getElementById('dashTableBody');
-            const totalEl = document.getElementById('stat-total');
-            const submitEl = document.getElementById('stat-submit');
-            if(!tbody || !totalEl || !submitEl) return;
-
-            const currentStudent = JSON.parse(localStorage.getItem('enzyme_student_data')) || studentData;
-            
-            totalEl.innerText = currentStudent.name ? "1명" : "0명";
-            submitEl.innerText = currentStudent.isSubmitted ? "1명" : "0명";
-
-            if(!currentStudent.name) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">현재 접속 활동 중인 디벗 학생이 없습니다.</td></tr>`;
-                return;
-            }
-
-            const stepNames = ["인적사항 입력", "가설 설정 완료", "실험 설계 완료", "실험 결과 기록 중", "결과 그래프 분석 중", "결론 도출 및 제출 완료"];
-            const curStepName = stepNames[currentStudent.currentStep - 1] || "종료";
-
-            tbody.innerHTML = `
-                <tr class="hover:bg-slate-50/80 transition">
-                    <td class="p-4 font-semibold text-slate-800">${escapeHtml(currentStudent.name)}</td>
-                    <td class="p-4"><span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-1 rounded-md border border-indigo-100">${curStepName}</span></td>
-                    <td class="p-4 font-mono text-xs text-slate-600">A: ${currentStudent.expData.a.ph || '-'} / B: ${currentStudent.expData.b.ph || '-'} / C: ${currentStudent.expData.c.ph || '-'}</td>
-                    <td class="p-4">${currentStudent.isSubmitted ? '<span class="text-emerald-600 font-bold text-xs"><i class="fa-solid fa-circle-check"></i> 완료됨</span>' : '<span class="text-amber-500 font-medium text-xs"><i class="fa-solid fa-spinner animate-spin"></i> 작성 중</span>'}</td>
-                </tr>
-            `;
-        }
-    </script>
+    document.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      render();
+      if (!navigator.onLine) setSyncStatus('offline','오프라인 · 기기에 저장');
+      else if (!isApiConfigured()) setSyncStatus('local','서버 미연결 · 기기에 저장');
+      else if (hasStudentIdentity()) syncToServer(false);
+    });
+  </script>
 </body>
 </html>
