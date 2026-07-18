@@ -5,2909 +5,352 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f766e">
   <title>카탈레이스 효소 반응 속도 탐구</title>
-
   <style>
-    :root {
-      --bg:#f4f7fb;
-      --card:#fff;
-      --text:#172033;
-      --muted:#667085;
-      --line:#dfe6ef;
-      --primary:#0f766e;
-      --primary-dark:#115e59;
-      --soft:#e7f7f4;
-      --blue:#3156d3;
-      --blue-soft:#eef2ff;
-      --amber:#8a4b00;
-      --amber-soft:#fff7e6;
-      --red:#b42318;
-      --red-soft:#fff0ee;
-      --green:#067647;
-      --green-soft:#ecfdf3;
-      --shadow:0 10px 30px rgba(28,39,60,.08);
-      --radius:22px;
-    }
-
-    * {
-      box-sizing:border-box;
-    }
-
-    html {
-      -webkit-text-size-adjust:100%;
-    }
-
-    body {
-      margin:0;
-      min-height:100vh;
-      background:var(--bg);
-      color:var(--text);
-      font-family:
-        "Pretendard",
-        "Noto Sans KR",
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-      line-height:1.55;
-    }
-
-    button,
-    input,
-    select,
-    textarea {
-      font:inherit;
-    }
-
-    button {
-      touch-action:manipulation;
-    }
-
-    .hidden {
-      display:none !important;
-    }
-
-    .app {
-      width:min(1120px, calc(100% - 28px));
-      margin:0 auto;
-      padding:18px 0 48px;
-    }
-
-    .card {
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-    }
-
-    .topbar {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:18px;
-      padding:20px 22px;
-      margin-bottom:16px;
-    }
-
-    .brand {
-      display:flex;
-      align-items:center;
-      gap:14px;
-      min-width:0;
-    }
-
-    .brand-icon {
-      width:58px;
-      height:58px;
-      flex:0 0 58px;
-      display:grid;
-      place-items:center;
-      border-radius:17px;
-      background:linear-gradient(135deg,#dff7f3,#eef2ff);
-      font-size:30px;
-    }
-
-    .brand h1 {
-      margin:0;
-      font-size:clamp(21px,3vw,29px);
-      letter-spacing:-.03em;
-    }
-
-    .brand p {
-      margin:2px 0 0;
-      color:var(--muted);
-      font-size:14px;
-    }
-
-    .top-actions {
-      display:flex;
-      align-items:center;
-      gap:8px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-
-    .sync-badge {
-      display:inline-flex;
-      align-items:center;
-      gap:7px;
-      min-height:38px;
-      padding:8px 11px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--muted);
-      font-size:13px;
-      font-weight:800;
-    }
-
-    .sync-dot {
-      width:9px;
-      height:9px;
-      border-radius:50%;
-      background:#98a2b3;
-    }
-
-    .sync-badge.online .sync-dot {
-      background:#12b76a;
-    }
-
-    .sync-badge.saving .sync-dot {
-      background:#f79009;
-      animation:pulse 1s infinite;
-    }
-
-    .sync-badge.offline .sync-dot {
-      background:#f04438;
-    }
-
-    @keyframes pulse {
-      50% {
-        opacity:.35;
-      }
-    }
-
-    .btn {
-      min-height:48px;
-      border:0;
-      border-radius:14px;
-      padding:11px 16px;
-      cursor:pointer;
-      font-weight:850;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      transition:transform .12s ease, background .12s ease;
-    }
-
-    .btn:active {
-      transform:translateY(1px);
-    }
-
-    .btn:disabled {
-      opacity:.45;
-      cursor:not-allowed;
-    }
-
-    .btn-primary {
-      color:#fff;
-      background:var(--primary);
-      box-shadow:0 8px 18px rgba(15,118,110,.2);
-    }
-
-    .btn-primary:hover {
-      background:var(--primary-dark);
-    }
-
-    .btn-soft {
-      color:#344054;
-      background:#f2f4f7;
-      border:1px solid #e4e7ec;
-    }
-
-    .btn-danger {
-      color:var(--red);
-      background:var(--red-soft);
-      border:1px solid #ffd5d0;
-    }
-
-    .btn-small {
-      min-height:38px;
-      padding:8px 12px;
-      border-radius:11px;
-      font-size:13px;
-    }
-
-    .stepper {
-      padding:14px 16px;
-      margin-bottom:16px;
-      overflow-x:auto;
-    }
-
-    .step-track {
-      display:grid;
-      grid-template-columns:repeat(6,minmax(110px,1fr));
-      min-width:720px;
-      gap:8px;
-    }
-
-    .step-item {
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 9px;
-      border-radius:13px;
-      color:#98a2b3;
-      font-size:13px;
-      font-weight:850;
-    }
-
-    .step-num {
-      width:30px;
-      height:30px;
-      border-radius:50%;
-      display:grid;
-      place-items:center;
-      background:#f2f4f7;
-      flex:0 0 30px;
-    }
-
-    .step-item.active {
-      color:var(--primary-dark);
-      background:var(--soft);
-    }
-
-    .step-item.active .step-num {
-      color:#fff;
-      background:var(--primary);
-    }
-
-    .step-item.done {
-      color:#344054;
-    }
-
-    .step-item.done .step-num {
-      color:var(--green);
-      background:var(--green-soft);
-    }
-
-    .main-card {
-      min-height:520px;
-      padding:clamp(20px,3vw,34px);
-    }
-
-    .page-head {
-      display:flex;
-      align-items:flex-start;
-      gap:13px;
-      margin-bottom:22px;
-    }
-
-    .page-icon {
-      width:44px;
-      height:44px;
-      border-radius:14px;
-      background:var(--soft);
-      display:grid;
-      place-items:center;
-      font-size:22px;
-      flex:0 0 44px;
-    }
-
-    .page-head h2 {
-      margin:0;
-      font-size:clamp(21px,3vw,27px);
-      letter-spacing:-.02em;
-    }
-
-    .page-head p {
-      margin:4px 0 0;
-      color:var(--muted);
-    }
-
-    .grid-2 {
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:16px;
-    }
-
-    .grid-3 {
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:14px;
-    }
-
-    .field {
-      margin-bottom:16px;
-    }
-
-    .field label {
-      display:block;
-      margin-bottom:7px;
-      font-size:14px;
-      font-weight:850;
-      color:#344054;
-    }
-
-    .required::after {
-      content:" *";
-      color:var(--red);
-    }
-
-    .input,
-    .select,
-    .textarea {
-      width:100%;
-      min-height:52px;
-      border:1.5px solid #cfd8e5;
-      border-radius:14px;
-      background:#fff;
-      color:var(--text);
-      padding:12px 14px;
-      outline:none;
-      font-size:16px;
-    }
-
-    .textarea {
-      min-height:122px;
-      resize:vertical;
-    }
-
-    .input:focus,
-    .select:focus,
-    .textarea:focus {
-      border-color:var(--primary);
-      box-shadow:0 0 0 4px rgba(15,118,110,.12);
-    }
-
-    .notice {
-      border-radius:16px;
-      padding:14px 16px;
-      margin:14px 0;
-      font-size:14px;
-    }
-
-    .notice.info {
-      background:var(--blue-soft);
-      color:#3043a7;
-      border:1px solid #d9e0ff;
-    }
-
-    .notice.warn {
-      background:var(--amber-soft);
-      color:#7a4600;
-      border:1px solid #f5dba8;
-    }
-
-    .notice.good {
-      background:var(--green-soft);
-      color:#05603a;
-      border:1px solid #b7ebce;
-    }
-
-    .notice.bad {
-      background:var(--red-soft);
-      color:#912018;
-      border:1px solid #ffd2cc;
-    }
-
-    .mini-card {
-      border:1px solid var(--line);
-      border-radius:17px;
-      padding:16px;
-      background:#fff;
-    }
-
-    .mini-card h3 {
-      margin:0 0 12px;
-      font-size:17px;
-    }
-
-    .subtle {
-      color:var(--muted);
-      font-size:14px;
-    }
-
-    .choice-grid {
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:12px;
-    }
-
-    .choice {
-      position:relative;
-      min-height:66px;
-      padding:14px 15px;
-      border:2px solid #e4e7ec;
-      border-radius:16px;
-      background:#fff;
-      cursor:pointer;
-      display:flex;
-      gap:11px;
-      align-items:center;
-    }
-
-    .choice input {
-      width:22px;
-      height:22px;
-      accent-color:var(--primary);
-      flex:0 0 22px;
-    }
-
-    .choice:has(input:checked) {
-      border-color:var(--primary);
-      background:var(--soft);
-    }
-
-    .choice strong {
-      display:block;
-      font-size:15px;
-    }
-
-    .variable-table {
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      border:1px solid var(--line);
-      border-radius:16px;
-      overflow:hidden;
-    }
-
-    .variable-table th,
-    .variable-table td {
-      padding:12px;
-      border-bottom:1px solid var(--line);
-      vertical-align:middle;
-    }
-
-    .variable-table th {
-      background:#f8fafc;
-      color:#475467;
-      font-size:13px;
-      text-align:left;
-    }
-
-    .variable-table tr:last-child td {
-      border-bottom:0;
-    }
-
-    .variable-table .role-cell {
-      width:220px;
-    }
-
-    .variable-row.invalid {
-      background:var(--red-soft);
-    }
-
-    .variable-row.invalid .select {
-      border-color:#f04438;
-    }
-
-    .group-card {
-      border:2px solid #e4e7ec;
-      border-radius:18px;
-      padding:16px;
-      background:#fff;
-    }
-
-    .group-card.acid {
-      border-top-color:#f97066;
-    }
-
-    .group-card.neutral {
-      border-top-color:#12b76a;
-    }
-
-    .group-card.base {
-      border-top-color:#53b1fd;
-    }
-
-    .group-badge {
-      display:inline-block;
-      border-radius:999px;
-      padding:5px 10px;
-      font-size:12px;
-      font-weight:900;
-      margin-bottom:10px;
-    }
-
-    .acid .group-badge {
-      color:#9c2a22;
-      background:#fee4e2;
-    }
-
-    .neutral .group-badge {
-      color:#05603a;
-      background:#d1fadf;
-    }
-
-    .base .group-badge {
-      color:#175cd3;
-      background:#d1e9ff;
-    }
-
-    .procedure {
-      counter-reset:procedure;
-      display:grid;
-      gap:10px;
-      margin:0;
-      padding:0;
-      list-style:none;
-    }
-
-    .procedure li {
-      display:grid;
-      grid-template-columns:34px 1fr;
-      gap:10px;
-      align-items:start;
-      padding:12px;
-      border-radius:13px;
-      background:#f8fafc;
-    }
-
-    .procedure li::before {
-      counter-increment:procedure;
-      content:counter(procedure);
-      width:28px;
-      height:28px;
-      display:grid;
-      place-items:center;
-      border-radius:50%;
-      background:var(--primary);
-      color:#fff;
-      font-weight:900;
-      font-size:13px;
-    }
-
-    .table-wrap {
-      overflow:auto;
-      border:1px solid var(--line);
-      border-radius:16px;
-    }
-
-    .data-table {
-      width:100%;
-      border-collapse:collapse;
-      min-width:680px;
-    }
-
-    .data-table th,
-    .data-table td {
-      padding:12px;
-      border-bottom:1px solid var(--line);
-      text-align:center;
-    }
-
-    .data-table th {
-      background:#f8fafc;
-      color:#475467;
-      font-size:13px;
-    }
-
-    .data-table tr:last-child td {
-      border-bottom:0;
-    }
-
-    .table-input {
-      width:120px;
-      min-height:46px;
-      border:1.5px solid #cfd8e5;
-      border-radius:12px;
-      padding:9px 10px;
-      font-size:16px;
-      text-align:center;
-    }
-
-    .rate-output {
-      font-weight:900;
-      color:var(--primary-dark);
-    }
-
-    .chart-wrap {
-      border:1px solid var(--line);
-      border-radius:17px;
-      padding:12px;
-      background:#fff;
-      overflow:auto;
-    }
-
-    .chart-wrap svg {
-      display:block;
-      width:100%;
-      min-width:620px;
-      height:auto;
-    }
-
-    .chart-legend {
-      display:flex;
-      justify-content:center;
-      gap:18px;
-      flex-wrap:wrap;
-      color:var(--muted);
-      font-size:13px;
-    }
-
-    .legend-dot {
-      display:inline-block;
-      width:10px;
-      height:10px;
-      border-radius:50%;
-      margin-right:6px;
-    }
-
-    .footer-nav {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      border-top:1px solid var(--line);
-      padding-top:20px;
-      margin-top:24px;
-    }
-
-    .footer-nav .right {
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-
-    .progress-note {
-      color:var(--muted);
-      font-size:13px;
-    }
-
-    .toast {
-      position:fixed;
-      left:50%;
-      bottom:24px;
-      transform:translateX(-50%);
-      z-index:1000;
-      max-width:min(640px,calc(100% - 28px));
-      background:#101828;
-      color:#fff;
-      border-radius:14px;
-      padding:12px 16px;
-      font-weight:800;
-      box-shadow:0 14px 40px rgba(16,24,40,.25);
-      text-align:center;
-    }
-
-    .error-boundary {
-      text-align:center;
-      padding:60px 20px;
-    }
-
-    @media(max-width:760px) {
-      .topbar {
-        align-items:flex-start;
-        flex-direction:column;
-      }
-
-      .top-actions {
-        width:100%;
-        justify-content:space-between;
-      }
-
-      .grid-2,
-      .grid-3,
-      .choice-grid {
-        grid-template-columns:1fr;
-      }
-
-      .main-card {
-        padding:18px 15px;
-      }
-
-      .variable-table th:first-child,
-      .variable-table td:first-child {
-        min-width:250px;
-      }
-
-      .variable-table .role-cell {
-        width:180px;
-      }
-
-      .footer-nav {
-        align-items:stretch;
-        flex-direction:column;
-      }
-
-      .footer-nav .right,
-      .footer-nav .btn {
-        width:100%;
-      }
-
-      .brand-icon {
-        width:50px;
-        height:50px;
-        flex-basis:50px;
-      }
-    }
+    :root{
+      --bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#667085;--line:#dfe6ef;
+      --primary:#0f766e;--primary-dark:#115e59;--soft:#e7f7f4;--blue:#3156d3;
+      --blue-soft:#eef2ff;--amber:#8a4b00;--amber-soft:#fff7e6;--red:#b42318;
+      --red-soft:#fff0ee;--green:#067647;--green-soft:#ecfdf3;
+      --shadow:0 10px 30px rgba(28,39,60,.08);--radius:22px
+    }
+    *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
+    button,input,select,textarea{font:inherit}button{touch-action:manipulation}.hidden{display:none!important}
+    .app{width:min(1120px,calc(100% - 28px));margin:0 auto;padding:18px 0 48px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 22px;margin-bottom:16px}.brand{display:flex;align-items:center;gap:14px;min-width:0}.brand-icon{width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(135deg,#dff7f3,#eef2ff);font-size:30px}.brand h1{margin:0;font-size:clamp(21px,3vw,29px);letter-spacing:-.03em}.brand p{margin:2px 0 0;color:var(--muted);font-size:14px}.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .sync-badge{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:8px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:13px;font-weight:800}.sync-dot{width:9px;height:9px;border-radius:50%;background:#98a2b3}.sync-badge.online .sync-dot{background:#12b76a}.sync-badge.saving .sync-dot{background:#f79009;animation:pulse 1s infinite}.sync-badge.offline .sync-dot{background:#f04438}@keyframes pulse{50%{opacity:.35}}
+    .btn{min-height:48px;border:0;border-radius:14px;padding:11px 16px;cursor:pointer;font-weight:850;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s ease,background .12s ease}.btn:active{transform:translateY(1px)}.btn:disabled{opacity:.45;cursor:not-allowed}.btn-primary{color:#fff;background:var(--primary);box-shadow:0 8px 18px rgba(15,118,110,.2)}.btn-primary:hover{background:var(--primary-dark)}.btn-soft{color:#344054;background:#f2f4f7;border:1px solid #e4e7ec}.btn-danger{color:var(--red);background:var(--red-soft);border:1px solid #ffd5d0}.btn-small{min-height:38px;padding:8px 12px;border-radius:11px;font-size:13px}
+    .stepper{padding:14px 16px;margin-bottom:16px;overflow-x:auto}.step-track{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));min-width:720px;gap:8px}.step-item{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:13px;color:#98a2b3;font-size:13px;font-weight:850}.step-num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f2f4f7;flex:0 0 30px}.step-item.active{color:var(--primary-dark);background:var(--soft)}.step-item.active .step-num{color:#fff;background:var(--primary)}.step-item.done{color:#344054}.step-item.done .step-num{color:var(--green);background:var(--green-soft)}
+    .main-card{min-height:520px;padding:clamp(20px,3vw,34px)}.page-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:22px}.page-icon{width:44px;height:44px;border-radius:14px;background:var(--soft);display:grid;place-items:center;font-size:22px;flex:0 0 44px}.page-head h2{margin:0;font-size:clamp(21px,3vw,27px);letter-spacing:-.02em}.page-head p{margin:4px 0 0;color:var(--muted)}
+    .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.field{margin-bottom:16px}.field label{display:block;margin-bottom:7px;font-size:14px;font-weight:850;color:#344054}.required::after{content:" *";color:var(--red)}
+    .input,.select,.textarea{width:100%;min-height:52px;border:1.5px solid #cfd8e5;border-radius:14px;background:#fff;color:var(--text);padding:12px 14px;outline:none;font-size:16px}.textarea{min-height:122px;resize:vertical}.input:focus,.select:focus,.textarea:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(15,118,110,.12)}
+    .notice{border-radius:16px;padding:14px 16px;margin:14px 0;font-size:14px}.notice.info{background:var(--blue-soft);color:#3043a7;border:1px solid #d9e0ff}.notice.warn{background:var(--amber-soft);color:#7a4600;border:1px solid #f5dba8}.notice.good{background:var(--green-soft);color:#05603a;border:1px solid #b7ebce}.notice.bad{background:var(--red-soft);color:#912018;border:1px solid #ffd2cc}
+    .mini-card{border:1px solid var(--line);border-radius:17px;padding:16px;background:#fff}.mini-card h3{margin:0 0 12px;font-size:17px}.subtle{color:var(--muted);font-size:14px}
+    .choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.choice{position:relative;min-height:66px;padding:14px 15px;border:2px solid #e4e7ec;border-radius:16px;background:#fff;cursor:pointer;display:flex;gap:11px;align-items:center}.choice input{width:22px;height:22px;accent-color:var(--primary);flex:0 0 22px}.choice:has(input:checked){border-color:var(--primary);background:var(--soft)}.choice strong{display:block;font-size:15px}
+    .variable-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:760px}.variable-table th,.variable-table td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}.variable-table th{background:#f8fafc;color:#475467;font-size:13px;text-align:center}.variable-table th:first-child,.variable-table td:first-child{text-align:left;min-width:300px}.variable-table tr:last-child td{border-bottom:0}.variable-table .role-column{width:145px;text-align:center}.variable-row.invalid{background:var(--red-soft)}.role-button{width:100%;min-height:44px;padding:8px 10px;border:2px solid #d0d5dd;border-radius:12px;background:#fff;color:#475467;font-weight:850;cursor:pointer}.role-button:hover{border-color:#98a2b3;background:#f8fafc}.role-button.selected{border-color:var(--primary);background:var(--primary);color:#fff;box-shadow:0 6px 14px rgba(15,118,110,.18)}.variable-row.invalid .role-button{border-color:#fda29b}.variable-row.invalid .role-button.selected{border-color:var(--primary)}
+    .group-card{border:2px solid #e4e7ec;border-radius:18px;padding:16px;background:#fff}.group-card.acid{border-top-color:#f97066}.group-card.neutral{border-top-color:#12b76a}.group-card.base{border-top-color:#53b1fd}.group-badge{display:inline-block;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:900;margin-bottom:10px}.acid .group-badge,.group-badge.acid{color:#9c2a22;background:#fee4e2}.neutral .group-badge,.group-badge.neutral{color:#05603a;background:#d1fadf}.base .group-badge,.group-badge.base{color:#175cd3;background:#d1e9ff}
+    .procedure{counter-reset:procedure;display:grid;gap:10px;margin:0;padding:0;list-style:none}.procedure li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;padding:12px;border-radius:13px;background:#f8fafc}.procedure li::before{counter-increment:procedure;content:counter(procedure);width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--primary);color:#fff;font-weight:900;font-size:13px}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px}.data-table{width:100%;border-collapse:collapse;min-width:680px}.data-table th,.data-table td{padding:12px;border-bottom:1px solid var(--line);text-align:center}.data-table th{background:#f8fafc;color:#475467;font-size:13px}.data-table tr:last-child td{border-bottom:0}.table-input{width:120px;min-height:46px;border:1.5px solid #cfd8e5;border-radius:12px;padding:9px 10px;font-size:16px;text-align:center}.rate-output{font-weight:900;color:var(--primary-dark)}
+    .chart-wrap{border:1px solid var(--line);border-radius:17px;padding:12px;background:#fff;overflow:auto}.chart-wrap svg{display:block;width:100%;min-width:620px;height:auto}.chart-legend{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:13px}.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+    .criteria-box{margin:10px 0 18px;padding:12px 14px;border:1px solid #c7d7fe;border-radius:14px;background:#f5f8ff;color:#3448a4;font-size:13px;font-weight:750}.answer-meta{display:flex;justify-content:space-between;gap:12px;margin-top:7px;color:var(--muted);font-size:12px;font-weight:750}.answer-count.met{color:var(--green)}.field-error{margin:7px 0 0;padding:9px 11px;border-radius:11px;background:var(--red-soft);color:var(--red);font-size:13px;font-weight:850}.field.invalid .input,.field.invalid .textarea,.field.invalid .select{border-color:#f04438;box-shadow:0 0 0 3px rgba(240,68,56,.1)}.field.invalid .choice-grid{padding:8px;border:2px solid #f04438;border-radius:18px;background:var(--red-soft)}.section-error{margin:10px 0 0;padding:11px 13px;border-radius:12px;background:var(--red-soft);color:var(--red);font-size:13px;font-weight:850}.overview-table{width:100%;border-collapse:collapse;min-width:620px}.overview-table th,.overview-table td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:center}.overview-table th{background:#f8fafc;color:#475467;font-size:13px}.overview-table td:first-child,.overview-table th:first-child{text-align:left}.overview-table tr:last-child td{border-bottom:0}.procedure-table{width:100%;border-collapse:collapse;min-width:680px}.procedure-table th,.procedure-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}.procedure-table th{background:#f8fafc;color:#475467;font-size:13px;text-align:left}.procedure-table td:first-child{width:72px;text-align:center;font-weight:900;color:var(--primary)}.procedure-table tr:last-child td{border-bottom:0}.footer-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:20px;margin-top:24px}.footer-nav .right{display:flex;gap:8px;flex-wrap:wrap}.progress-note{color:var(--muted);font-size:13px}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1000;max-width:min(640px,calc(100% - 28px));background:#101828;color:#fff;border-radius:14px;padding:12px 16px;font-weight:800;box-shadow:0 14px 40px rgba(16,24,40,.25);text-align:center}.error-boundary{text-align:center;padding:60px 20px}
+    @media(max-width:760px){.topbar{align-items:flex-start;flex-direction:column}.top-actions{width:100%;justify-content:space-between}.grid-2,.grid-3,.choice-grid{grid-template-columns:1fr}.main-card{padding:18px 15px}.variable-table th:first-child,.variable-table td:first-child{min-width:250px}.variable-table .role-column{width:120px}.answer-meta{align-items:flex-start;flex-direction:column;gap:2px}.footer-nav{align-items:stretch;flex-direction:column}.footer-nav .right,.footer-nav .btn{width:100%}.brand-icon{width:50px;height:50px;flex-basis:50px}}
   </style>
 </head>
-
 <body>
   <div class="app">
     <header class="card topbar">
       <div class="brand">
         <div class="brand-icon">🧪</div>
-        <div>
-          <h1>카탈레이스 효소 반응 속도 탐구</h1>
-          <p>고등학교 생명과학 실험 활동지</p>
-        </div>
+        <div><h1>카탈레이스 효소 반응 속도 탐구</h1><p>고등학교 생명과학 실험 활동지</p></div>
       </div>
-
       <div class="top-actions">
-        <div id="syncBadge" class="sync-badge" aria-live="polite">
-          <span class="sync-dot"></span>
-          <span id="syncText">이 기기에 자동 저장</span>
-        </div>
-
-        <button
-          class="btn btn-soft btn-small"
-          type="button"
-          onclick="resetActivity()"
-        >
-          ↺ 초기화
-        </button>
+        <div id="syncBadge" class="sync-badge" aria-live="polite"><span class="sync-dot"></span><span id="syncText">이 기기에 자동 저장</span></div>
+        <button class="btn btn-soft btn-small" type="button" onclick="resetActivity()">↺ 초기화</button>
       </div>
     </header>
 
-    <nav class="card stepper" aria-label="활동 단계">
-      <div id="stepTrack" class="step-track"></div>
-    </nav>
-
-    <main id="mainCard" class="card main-card" tabindex="-1">
-      <div class="error-boundary">활동지를 불러오는 중입니다…</div>
-    </main>
+    <nav class="card stepper" aria-label="활동 단계"><div id="stepTrack" class="step-track"></div></nav>
+    <main id="mainCard" class="card main-card" tabindex="-1"><div class="error-boundary">활동지를 불러오는 중입니다…</div></main>
   </div>
-
   <div id="toast" class="toast hidden" aria-live="polite"></div>
 
   <script>
     'use strict';
 
-    const CONFIG = {
-      API_URL: 'https://script.google.com/macros/s/AKfycbwPkmzNw_ccqQUK6TdUylqVh5UbddS1P-d-ttujhZqftAvGtP9DaAkLQIPFUdiFXXzM/exec',
-      STORAGE_KEY: 'catalase_activity_v6_self_response',
-      AUTO_SYNC_DELAY_MS: 900,
-      MAX_TIME_SECONDS: 600
+    const CONFIG={
+      API_URL:'https://script.google.com/macros/s/AKfycbwPkmzNw_ccqQUK6TdUylqVh5UbddS1P-d-ttujhZqftAvGtP9DaAkLQIPFUdiFXXzM/exec',
+      STORAGE_KEY:'catalase_activity_v6_self_response',
+      AUTO_SYNC_DELAY_MS:900,
+      MAX_TIME_SECONDS:600
     };
 
-    const STEP_NAMES = [
-      '시작',
-      '가설',
-      '실험 설계',
-      '결과 기록',
-      '해석·그래프',
-      '결론·제출'
+    const STEP_NAMES=['시작','가설','실험 설계','결과 기록','해석·그래프','결론·제출'];
+    const MIN_LENGTHS={hypothesisReason:8,evidence:8,explanation:8,limitation:8,conclusion:15};
+    const GROUPS=[
+      {id:'A',label:'산성 조건',className:'acid'},
+      {id:'B',label:'중성 부근 조건',className:'neutral'},
+      {id:'C',label:'염기성 조건',className:'base'}
+    ];
+    const ROLE_LABELS={independent:'조작 변인',controlled:'통제 변인',dependent:'종속 변인'};
+    const VARIABLE_ITEMS=[
+      {id:'ph',label:'용액의 pH',correct:'independent'},
+      {id:'riseTime',label:'거름종이가 떠오르는 시간',correct:'dependent'},
+      {id:'reactionRate',label:'카탈레이스의 반응 속도(1/t)',correct:'dependent'},
+      {id:'h2o2',label:'과산화수소수의 농도와 부피',correct:'controlled'},
+      {id:'catalase',label:'카탈레이스 용액의 농도',correct:'controlled'},
+      {id:'paperSize',label:'거름종이 원판의 크기',correct:'controlled'},
+      {id:'soakTime',label:'거름종이를 카탈레이스 용액에 담그는 시간',correct:'controlled'},
+      {id:'temperature',label:'반응 용액의 온도',correct:'controlled'},
+      {id:'totalVolume',label:'반응 용액의 전체 부피',correct:'controlled'}
     ];
 
-    const GROUPS = [
-      {
-        id:'A',
-        label:'산성 조건',
-        className:'acid'
-      },
-      {
-        id:'B',
-        label:'중성 부근 조건',
-        className:'neutral'
-      },
-      {
-        id:'C',
-        label:'염기성 조건',
-        className:'base'
-      }
-    ];
+    let state=initialState();
+    let syncTimer=null;
 
-    const ROLE_LABELS = {
-      independent:'조작 변인',
-      controlled:'통제 변인',
-      dependent:'종속 변인'
-    };
-
-    const VARIABLE_ITEMS = [
-      {
-        id:'ph',
-        label:'용액의 pH',
-        correct:'independent'
-      },
-      {
-        id:'riseTime',
-        label:'거름종이가 떠오르는 시간',
-        correct:'dependent'
-      },
-      {
-        id:'reactionRate',
-        label:'카탈레이스의 반응 속도(1/t)',
-        correct:'dependent'
-      },
-      {
-        id:'h2o2',
-        label:'과산화수소수의 농도와 부피',
-        correct:'controlled'
-      },
-      {
-        id:'catalase',
-        label:'카탈레이스 용액의 농도',
-        correct:'controlled'
-      },
-      {
-        id:'paperSize',
-        label:'거름종이 원판의 크기',
-        correct:'controlled'
-      },
-      {
-        id:'soakTime',
-        label:'거름종이를 카탈레이스 용액에 담그는 시간',
-        correct:'controlled'
-      },
-      {
-        id:'temperature',
-        label:'반응 용액의 온도',
-        correct:'controlled'
-      },
-      {
-        id:'totalVolume',
-        label:'반응 용액의 전체 부피',
-        correct:'controlled'
-      }
-    ];
-
-    let state = initialState();
-    let syncTimer = null;
-
-    function initialState() {
-      return {
-        version:6,
-        step:1,
-
-        student:{
-          studentId:'',
-          name:''
-        },
-
-        hypothesis:{
-          prediction:'',
-          reason:''
-        },
-
-        design:{
-          roles:{},
-          targets:{
-            A:'',
-            B:'',
-            C:''
-          }
-        },
-
-        results:{
-          A:{
-            actualPh:'',
-            time:''
-          },
-          B:{
-            actualPh:'',
-            time:''
-          },
-          C:{
-            actualPh:'',
-            time:''
-          }
-        },
-
-        analysis:{
-          supported:'',
-          evidence:'',
-          explanation:'',
-          limitation:''
-        },
-
-        conclusion:'',
-        submitted:false,
-        updatedAt:''
+    function initialState(){
+      return{
+        version:6,step:1,
+        student:{studentId:'',name:''},
+        hypothesis:{prediction:'',reason:''},
+        design:{roles:{},targets:{A:'',B:'',C:''}},
+        results:{A:{actualPh:'',time:''},B:{actualPh:'',time:''},C:{actualPh:'',time:''}},
+        analysis:{supported:'',evidence:'',explanation:'',limitation:''},
+        conclusion:'',submitted:false,updatedAt:''
       };
     }
 
-    function normalize(raw) {
-      const base = initialState();
-
-      if (!raw || typeof raw !== 'object') {
-        return base;
-      }
-
-      const step = Number(raw.step);
-
-      base.step =
-        Number.isInteger(step) && step >= 1 && step <= 6
-          ? step
-          : 1;
-
-      base.student.studentId =
-        String(raw.student?.studentId ?? '');
-
-      base.student.name =
-        String(raw.student?.name ?? '');
-
-      base.hypothesis.prediction =
-        String(raw.hypothesis?.prediction ?? '');
-
-      base.hypothesis.reason =
-        String(raw.hypothesis?.reason ?? '');
-
-      if (
-        raw.design?.roles &&
-        typeof raw.design.roles === 'object'
-      ) {
-        for (const item of VARIABLE_ITEMS) {
-          const role =
-            String(raw.design.roles[item.id] ?? '');
-
-          base.design.roles[item.id] =
-            ROLE_LABELS[role] ? role : '';
+    function normalize(raw){
+      const base=initialState();
+      if(!raw||typeof raw!=='object')return base;
+      const step=Number(raw.step);base.step=Number.isInteger(step)&&step>=1&&step<=6?step:1;
+      base.student.studentId=String(raw.student?.studentId??'');
+      base.student.name=String(raw.student?.name??'');
+      base.hypothesis.prediction=String(raw.hypothesis?.prediction??'');
+      base.hypothesis.reason=String(raw.hypothesis?.reason??'');
+      if(raw.design?.roles&&typeof raw.design.roles==='object'){
+        for(const item of VARIABLE_ITEMS){
+          const role=String(raw.design.roles[item.id]??'');
+          base.design.roles[item.id]=ROLE_LABELS[role]?role:'';
         }
       }
-
-      for (const group of GROUPS) {
-        const target =
-          raw.design?.targets?.[group.id];
-
-        base.design.targets[group.id] =
-          target === '' || target == null
-            ? ''
-            : Number(target);
-
-        if (
-          !Number.isFinite(
-            base.design.targets[group.id]
-          )
-        ) {
-          base.design.targets[group.id] = '';
-        }
-
-        const actualPh =
-          raw.results?.[group.id]?.actualPh;
-
-        const time =
-          raw.results?.[group.id]?.time;
-
-        base.results[group.id].actualPh =
-          actualPh === '' || actualPh == null
-            ? ''
-            : Number(actualPh);
-
-        base.results[group.id].time =
-          time === '' || time == null
-            ? ''
-            : Number(time);
-
-        if (
-          !Number.isFinite(
-            base.results[group.id].actualPh
-          )
-        ) {
-          base.results[group.id].actualPh = '';
-        }
-
-        if (
-          !Number.isFinite(
-            base.results[group.id].time
-          )
-        ) {
-          base.results[group.id].time = '';
-        }
+      for(const g of GROUPS){
+        const t=raw.design?.targets?.[g.id];
+        base.design.targets[g.id]=t===''||t==null?'':Number(t);
+        if(!Number.isFinite(base.design.targets[g.id]))base.design.targets[g.id]='';
+        const ph=raw.results?.[g.id]?.actualPh;
+        const time=raw.results?.[g.id]?.time;
+        base.results[g.id].actualPh=ph===''||ph==null?'':Number(ph);
+        base.results[g.id].time=time===''||time==null?'':Number(time);
+        if(!Number.isFinite(base.results[g.id].actualPh))base.results[g.id].actualPh='';
+        if(!Number.isFinite(base.results[g.id].time))base.results[g.id].time='';
       }
-
-      base.analysis.supported =
-        String(raw.analysis?.supported ?? '');
-
-      base.analysis.evidence =
-        String(raw.analysis?.evidence ?? '');
-
-      base.analysis.explanation =
-        String(raw.analysis?.explanation ?? '');
-
-      base.analysis.limitation =
-        String(raw.analysis?.limitation ?? '');
-
-      base.conclusion =
-        String(raw.conclusion ?? '');
-
-      base.submitted =
-        raw.submitted === true;
-
-      base.updatedAt =
-        String(raw.updatedAt ?? '');
-
+      base.analysis.supported=String(raw.analysis?.supported??'');
+      base.analysis.evidence=String(raw.analysis?.evidence??'');
+      base.analysis.explanation=String(raw.analysis?.explanation??'');
+      base.analysis.limitation=String(raw.analysis?.limitation??'');
+      base.conclusion=String(raw.conclusion??'');
+      base.submitted=raw.submitted===true;base.updatedAt=String(raw.updatedAt??'');
       return base;
     }
 
-    function safeText(value) {
-      return String(value ?? '')
-        .replaceAll('&','&amp;')
-        .replaceAll('<','&lt;')
-        .replaceAll('>','&gt;')
-        .replaceAll('"','&quot;')
-        .replaceAll("'",'&#039;');
+    function safeText(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+    function isApiConfigured(){return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(CONFIG.API_URL.trim())}
+    function storageGet(key){try{return localStorage.getItem(key)}catch(error){console.warn('storage read failed',error);return null}}
+    function storageSet(key,value){try{localStorage.setItem(key,value);return true}catch(error){console.warn('storage write failed',error);return false}}
+    function storageRemove(key){try{localStorage.removeItem(key)}catch(error){console.warn('storage remove failed',error)}}
+    function loadState(){try{const saved=storageGet(CONFIG.STORAGE_KEY);state=saved?normalize(JSON.parse(saved)):initialState()}catch(error){console.error(error);state=initialState();storageRemove(CONFIG.STORAGE_KEY)}}
+    function saveLocal(){state.updatedAt=new Date().toISOString();storageSet(CONFIG.STORAGE_KEY,JSON.stringify(state));scheduleSync()}
+    function hasStudentIdentity(){return Boolean(state.student.studentId.trim()&&state.student.name.trim())}
+    function studentKey(){return state.student.studentId.trim()}
+    function calculateAll(){
+      const out={};
+      for(const g of GROUPS){
+        const ph=Number(state.results[g.id].actualPh),time=Number(state.results[g.id].time);
+        out[g.id]={ph:Number.isFinite(ph)?ph:null,time:Number.isFinite(time)?time:null,rate:Number.isFinite(time)&&time>0?1/time:null};
+      }
+      return out;
+    }
+    function makePayload(finalSubmit){return{action:'save',finalSubmit:Boolean(finalSubmit),studentKey:studentKey(),studentId:state.student.studentId.trim(),name:state.student.name.trim(),currentStep:state.step,submitted:state.submitted,hypothesis:state.hypothesis,design:state.design,results:state.results,calculated:calculateAll(),analysis:state.analysis,conclusion:state.conclusion,clientUpdatedAt:state.updatedAt}}
+
+    async function apiPost(payload){
+      const response=await fetch(CONFIG.API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),redirect:'follow',cache:'no-store'});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const text=await response.text();let data;try{data=JSON.parse(text)}catch{throw new Error('서버 응답을 읽지 못했습니다. Apps Script 배포 설정을 확인하세요.')}
+      if(!data.ok)throw new Error(data.message||'서버 처리 실패');return data;
+    }
+    function scheduleSync(){
+      if(!hasStudentIdentity()){setSyncStatus('local','이 기기에 자동 저장');return}
+      if(!isApiConfigured()){setSyncStatus('local','서버 미연결 · 기기에 저장');return}
+      clearTimeout(syncTimer);setSyncStatus('saving','저장 중…');syncTimer=setTimeout(()=>syncToServer(false),CONFIG.AUTO_SYNC_DELAY_MS);
+    }
+    async function syncToServer(finalSubmit){
+      if(!isApiConfigured()||!hasStudentIdentity())return{ok:false,localOnly:true};
+      try{setSyncStatus('saving',finalSubmit?'제출 중…':'저장 중…');const result=await apiPost(makePayload(finalSubmit));setSyncStatus('online',finalSubmit?'제출 완료':'서버 저장 완료');return result}
+      catch(error){console.error(error);setSyncStatus('offline','서버 연결 실패 · 기기에 저장됨');if(finalSubmit)showToast(`서버 제출에 실패했습니다. 인터넷 연결 후 다시 눌러 주세요. (${error.message})`,5000);return{ok:false,error}}
+    }
+    function setSyncStatus(type,text){const badge=document.getElementById('syncBadge'),label=document.getElementById('syncText');if(!badge||!label)return;badge.className='sync-badge'+(type==='online'?' online':type==='saving'?' saving':type==='offline'?' offline':'');label.textContent=text}
+    function showToast(message,duration=2800){const el=document.getElementById('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.classList.add('hidden'),duration)}
+
+    function renderStepper(){const track=document.getElementById('stepTrack');track.innerHTML=STEP_NAMES.map((name,i)=>{const n=i+1,cls=n===state.step?'active':n<state.step?'done':'',num=n<state.step?'✓':n;return`<div class="step-item ${cls}"><span class="step-num">${num}</span><span>${name}</span></div>`}).join('')}
+    function pageHead(icon,title,description){return`<div class="page-head"><div class="page-icon">${icon}</div><div><h2>${title}</h2><p>${description}</p></div></div>`}
+    function footerNav(nextLabel,nextFn,back=true){return`<div class="footer-nav">${back?'<button class="btn btn-soft" type="button" onclick="goBack()">← 이전 단계</button>':'<span class="progress-note">입력 내용은 자동 저장됩니다.</span>'}<div class="right"><button class="btn btn-primary" type="button" onclick="${nextFn}">${nextLabel} →</button></div></div>`}
+    function render(){
+      renderStepper();const main=document.getElementById('mainCard');
+      try{const renderer=[null,renderStart,renderHypothesis,renderDesign,renderResults,renderAnalysis,renderConclusion][state.step];main.innerHTML=renderer();main.focus({preventScroll:true});if(state.step===4)updateResultPreview()}
+      catch(error){console.error('render failed',error);main.innerHTML='<div class="error-boundary"><h2>화면을 불러오지 못했습니다.</h2><button class="btn btn-danger" onclick="resetActivity(true)">저장 데이터 비우고 다시 시작</button></div>'}
     }
 
-    function isApiConfigured() {
-      return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/
-        .test(CONFIG.API_URL.trim());
+    function renderStart(){return`${pageHead('👋','활동 시작하기','학번과 이름을 각각 입력합니다.')}
+      <div class="notice info"><b>디벗 사용 안내</b><br>입력 내용은 같은 브라우저에 자동 저장됩니다.</div>
+      <div class="grid-2">
+        <div class="field"><label class="required" for="studentId">학번</label><input class="input" id="studentId" inputmode="numeric" maxlength="10" value="${safeText(state.student.studentId)}"></div>
+        <div class="field"><label class="required" for="studentName">이름</label><input class="input" id="studentName" autocomplete="name" maxlength="20" value="${safeText(state.student.name)}"></div>
+      </div>
+      <div class="mini-card"><h3>탐구 문제</h3><p style="margin:0;font-size:18px;font-weight:850">용액의 pH가 달라지면 카탈레이스의 반응 속도는 어떻게 달라질까?</p></div>
+      ${footerNav('가설 세우기','saveStart()',false)}`}
+    function saveStart(){const studentId=document.getElementById('studentId').value.trim(),name=document.getElementById('studentName').value.trim();if(!studentId||!name)return showToast('학번과 이름을 모두 입력해 주세요.');if(!/^\d{3,10}$/.test(studentId))return showToast('학번은 숫자로 입력해 주세요.');state.student={studentId,name};state.step=2;saveLocal();render()}
+
+    function answerGuide(inputId,min,currentValue){
+      const count=String(currentValue??'').trim().length;
+      return`<div class="answer-meta"><span>작성 기준: 공백을 제외하고 ${min}자 이상</span><span id="${inputId}-count" class="answer-count ${count>=min?'met':''}">${count}/${min}자</span></div><p id="${inputId}-error" class="field-error hidden" role="alert"></p>`
+    }
+    function updateAnswerGuide(inputId,min){
+      const input=document.getElementById(inputId),counter=document.getElementById(`${inputId}-count`),field=document.getElementById(`${inputId}-field`),error=document.getElementById(`${inputId}-error`);
+      if(!input||!counter)return;
+      const count=input.value.trim().length;
+      counter.textContent=`${count}/${min}자`;
+      counter.classList.toggle('met',count>=min);
+      if(count>=min){field?.classList.remove('invalid');error?.classList.add('hidden')}
+    }
+    function clearValidationErrors(){
+      document.querySelectorAll('.field.invalid,.variable-row.invalid').forEach(el=>el.classList.remove('invalid'));
+      document.querySelectorAll('.field-error,.section-error').forEach(el=>{el.classList.add('hidden');el.textContent=''})
+    }
+    function showFieldError(fieldId,errorId,message,focusId){
+      const field=document.getElementById(fieldId),error=document.getElementById(errorId),focus=document.getElementById(focusId||'');
+      field?.classList.add('invalid');
+      if(error){error.textContent=message;error.classList.remove('hidden')}
+      (field||focus)?.scrollIntoView({behavior:'smooth',block:'center'});
+      setTimeout(()=>focus?.focus(),250)
+    }
+    function showSectionError(errorId,message,targetId){
+      const error=document.getElementById(errorId),target=document.getElementById(targetId);
+      if(error){error.textContent=message;error.classList.remove('hidden')}
+      (target||error)?.scrollIntoView({behavior:'smooth',block:'center'})
     }
 
-    function storageGet(key) {
-      try {
-        return localStorage.getItem(key);
-      } catch (error) {
-        console.warn('storage read failed',error);
-        return null;
-      }
+    function renderHypothesis(){
+      const choices=[['acid','산성 조건에서 가장 빠를 것이다'],['neutral','중성에 가까운 조건에서 가장 빠를 것이다'],['base','염기성 조건에서 가장 빠를 것이다'],['same','pH가 달라도 큰 차이가 없을 것이다']];
+      return`${pageHead('💡','1. 가설 설정','실험 전에 예상되는 결과와 그 까닭을 작성합니다.')}
+        <div class="criteria-box">다음 단계로 넘어가는 기준: 예상 결과 1개 선택 + ‘예상한 까닭’ ${MIN_LENGTHS.hypothesisReason}자 이상. 작성 내용의 정답 여부는 자동으로 판단하지 않습니다.</div>
+        <div class="field" id="prediction-field"><label class="required">예상되는 결과</label><div class="choice-grid">${choices.map(([v,t])=>`<label class="choice"><input type="radio" name="prediction" value="${v}" ${state.hypothesis.prediction===v?'checked':''} onchange="document.getElementById('prediction-field')?.classList.remove('invalid');document.getElementById('prediction-error')?.classList.add('hidden')"><strong>${t}</strong></label>`).join('')}</div><p id="prediction-error" class="field-error hidden" role="alert"></p></div>
+        <div class="field" id="hypothesisReason-field"><label class="required" for="hypothesisReason">예상한 까닭</label><textarea class="textarea" id="hypothesisReason" maxlength="400" oninput="updateAnswerGuide('hypothesisReason',MIN_LENGTHS.hypothesisReason)">${safeText(state.hypothesis.reason)}</textarea>${answerGuide('hypothesisReason',MIN_LENGTHS.hypothesisReason,state.hypothesis.reason)}</div>
+        ${footerNav('실험 설계하기','saveHypothesis()')}`
+    }
+    function saveHypothesis(){
+      clearValidationErrors();
+      const prediction=document.querySelector('input[name="prediction"]:checked')?.value||'',reason=document.getElementById('hypothesisReason').value.trim();
+      if(!prediction){showFieldError('prediction-field','prediction-error','예상되는 결과를 1개 선택해야 다음 단계로 넘어갈 수 있습니다.');return}
+      if(reason.length<MIN_LENGTHS.hypothesisReason){showFieldError('hypothesisReason-field','hypothesisReason-error',`현재 ${reason.length}자입니다. 공백을 제외하고 ${MIN_LENGTHS.hypothesisReason}자 이상 작성해야 다음 단계로 넘어갈 수 있습니다.`,'hypothesisReason');return}
+      state.hypothesis={prediction,reason};state.step=3;saveLocal();render()
     }
 
-    function storageSet(key,value) {
-      try {
-        localStorage.setItem(key,value);
-        return true;
-      } catch (error) {
-        console.warn('storage write failed',error);
-        return false;
-      }
+    function roleButtonCells(item){
+      const selected=state.design.roles[item.id]||'';
+      return Object.entries(ROLE_LABELS).map(([role,label])=>`<td class="role-column"><button type="button" class="role-button ${selected===role?'selected':''}" data-role-item="${item.id}" data-role="${role}" aria-pressed="${selected===role}" onclick="selectRole('${item.id}','${role}')">${selected===role?'✓ ':''}${label.replace(' 변인','')}</button></td>`).join('')
+    }
+    function selectRole(itemId,role){
+      const input=document.getElementById(`role-${itemId}`);
+      if(input)input.value=role;
+      document.querySelectorAll(`[data-role-item="${itemId}"]`).forEach(button=>{
+        const selected=button.dataset.role===role;
+        button.classList.toggle('selected',selected);
+        button.setAttribute('aria-pressed',String(selected));
+        button.textContent=`${selected?'✓ ':''}${ROLE_LABELS[button.dataset.role].replace(' 변인','')}`
+      });
+      document.getElementById(`row-${itemId}`)?.classList.remove('invalid');
+      document.getElementById('variable-error')?.classList.add('hidden')
     }
 
-    function storageRemove(key) {
-      try {
-        localStorage.removeItem(key);
-      } catch (error) {
-        console.warn('storage remove failed',error);
-      }
+    function targetText(value){return value===''?'(입력한 값)':safeText(value)}
+    function procedureItems(targets){return[
+      '보안경과 장갑을 착용하고 실험 도구를 준비한다.',
+      'A, B, C 용기에 같은 농도와 부피의 과산화수소수를 넣는다.',
+      `희석한 염산·수산화나트륨과 물을 사용하여 A는 pH ${targetText(targets.A)}, B는 pH ${targetText(targets.B)}, C는 pH ${targetText(targets.C)} 부근으로 맞춘다. 세 용액의 전체 부피는 같게 한다.`,
+      'pH 측정기로 각 용액의 반응 직전 실제 pH를 측정한다. 조건을 바꿀 때마다 전극을 증류수로 씻는다.',
+      '같은 크기의 거름종이 원판을 카탈레이스 용액에 같은 시간 동안 담근 뒤, 같은 방법으로 겉의 남은 용액을 제거한다.',
+      '거름종이 원판을 용액 바닥까지 넣는 순간 시간을 재고, 원판이 수면에 도달하면 시간을 멈춘다.',
+      '각 pH 조건에서 한 번씩 측정하고, 조건마다 새 거름종이 원판을 사용한다.',
+      '각 조건의 반응 속도를 1 ÷ 떠오르는 시간(s)으로 계산한다.'
+    ]}
+    function procedureTableRows(targets){return procedureItems(targets).map((text,index)=>`<tr><td>${index+1}</td><td>${text}</td></tr>`).join('')}
+    function currentTargets(){const result={};for(const g of GROUPS){const el=document.getElementById(`target-${g.id}`);result[g.id]=el?el.value:state.design.targets[g.id]}return result}
+    function updateProcedurePreview(){const list=document.getElementById('procedureList');if(list)list.innerHTML=procedureTableRows(currentTargets())}
+    function renderDesign(){return`${pageHead('🧩','2. 실험 설계','각 변인을 조작 변인, 통제 변인, 종속 변인으로 분류합니다.')}
+      <div class="criteria-box">모든 변인을 버튼으로 분류하고, A·B·C의 목표 pH를 입력해야 다음 단계로 넘어갑니다. 틀린 항목의 정답은 표시하지 않고 다시 확인할 항목 수만 안내합니다.</div>
+      <div class="mini-card" id="variable-section"><h3>① 변인 분류</h3><div class="table-wrap"><table class="variable-table"><thead><tr><th>변인</th><th class="role-column">조작 변인</th><th class="role-column">통제 변인</th><th class="role-column">종속 변인</th></tr></thead><tbody>${VARIABLE_ITEMS.map(item=>`<tr id="row-${item.id}" class="variable-row"><td><b>${item.label}</b><input type="hidden" id="role-${item.id}" value="${safeText(state.design.roles[item.id]||'')}"></td>${roleButtonCells(item)}</tr>`).join('')}</tbody></table></div><p id="variable-error" class="section-error hidden" role="alert"></p></div>
+      <div class="mini-card" id="target-section" style="margin-top:18px"><h3>② 실험군별 목표 pH</h3><div class="table-wrap"><table class="overview-table"><thead><tr><th>조건</th><th>설정 내용</th><th>목표 pH</th></tr></thead><tbody>${GROUPS.map(g=>`<tr><td><span class="group-badge ${g.className}">${g.id}</span></td><td><b>${g.label}</b></td><td><input class="table-input" id="target-${g.id}" type="number" min="0" max="14" step="0.1" value="${safeText(state.design.targets[g.id])}" oninput="updateProcedurePreview();document.getElementById('target-error')?.classList.add('hidden')"></td></tr>`).join('')}</tbody></table></div><p id="target-error" class="section-error hidden" role="alert"></p></div>
+      <div class="mini-card" style="margin-top:18px"><h3>③ 자동 생성 실험 과정</h3><div class="table-wrap"><table class="procedure-table"><thead><tr><th>순서</th><th>실험 과정</th></tr></thead><tbody id="procedureList">${procedureTableRows(state.design.targets)}</tbody></table></div></div>
+      ${footerNav('결과 기록하기','saveDesign()')}`}
+
+    function saveDesign(){
+      clearValidationErrors();
+      const roles={};let missing=0,wrong=0;
+      for(const item of VARIABLE_ITEMS){const v=document.getElementById(`role-${item.id}`).value;roles[item.id]=v;const row=document.getElementById(`row-${item.id}`);if(!v){missing++;row.classList.add('invalid')}else if(v!==item.correct){wrong++;row.classList.add('invalid')}}
+      if(missing){showSectionError('variable-error',`분류하지 않은 변인이 ${missing}개 있습니다. 표시된 행에서 버튼을 눌러 주세요.`,'variable-section');return}
+      if(wrong){showSectionError('variable-error',`분류를 다시 확인할 변인이 ${wrong}개 있습니다. 표시된 행을 다시 생각해 보세요.`,'variable-section');return}
+      const targets=Object.fromEntries(GROUPS.map(g=>[g.id,Number(document.getElementById(`target-${g.id}`).value)]));
+      if(Object.values(targets).some(v=>!Number.isFinite(v)||v<0||v>14)){showSectionError('target-error','A, B, C의 목표 pH를 모두 0~14 사이의 수로 입력해야 다음 단계로 넘어갈 수 있습니다.','target-section');return}
+      if(!(targets.A<targets.B&&targets.B<targets.C)){showSectionError('target-error','목표 pH의 순서를 확인해 주세요. A < B < C가 되어야 합니다.','target-section');return}
+      state.design={roles,targets};state.step=4;saveLocal();render()
     }
 
-    function loadState() {
-      try {
-        const saved =
-          storageGet(CONFIG.STORAGE_KEY);
+    function renderResults(){const calc=calculateAll();return`${pageHead('⏱️','3. 결과 기록','각 조건의 실제 pH와 떠오르는 시간을 기록합니다.')}
+      <div class="criteria-box">입력 기준: 실제 pH는 0~14, 떠오르는 시간은 0초보다 크고 600초 이하여야 합니다. 세 조건을 모두 입력해야 다음 단계로 넘어갑니다.</div>
+      <div id="results-section" class="table-wrap"><table class="data-table"><thead><tr><th>조건</th><th>실제 pH</th><th>떠오르는 시간(s)</th><th>반응 속도 1/t (s⁻¹)</th></tr></thead><tbody>${GROUPS.map(g=>`<tr><td><b>${g.id}</b> · ${g.label}</td><td><input class="table-input" id="ph-${g.id}" type="number" inputmode="decimal" min="0" max="14" step="0.1" value="${safeText(state.results[g.id].actualPh)}" oninput="updateResultPreview();document.getElementById('results-error')?.classList.add('hidden')"></td><td><input class="table-input" id="time-${g.id}" type="number" inputmode="decimal" min="0.1" max="600" step="0.1" value="${safeText(state.results[g.id].time)}" oninput="updateResultPreview();document.getElementById('results-error')?.classList.add('hidden')"></td><td id="rate-${g.id}" class="rate-output">${Number.isFinite(calc[g.id].rate)?calc[g.id].rate.toFixed(4):'-'}</td></tr>`).join('')}</tbody></table></div><p id="results-error" class="section-error hidden" role="alert"></p>
+      ${footerNav('그래프와 결과 해석','saveResults()')}`}
+    function readResultsFromInputs(){const out={};for(const g of GROUPS){out[g.id]={actualPh:document.getElementById(`ph-${g.id}`)?.value??'',time:document.getElementById(`time-${g.id}`)?.value??''}}return out}
+    function updateResultPreview(){for(const g of GROUPS){const time=Number(document.getElementById(`time-${g.id}`)?.value),cell=document.getElementById(`rate-${g.id}`);if(cell)cell.textContent=Number.isFinite(time)&&time>0?(1/time).toFixed(4):'-'}}
+    function saveResults(){clearValidationErrors();const raw=readResultsFromInputs(),clean={};for(const g of GROUPS){const ph=Number(raw[g.id].actualPh),time=Number(raw[g.id].time);if(!Number.isFinite(ph)||ph<0||ph>14){showSectionError('results-error',`${g.id} 조건의 실제 pH를 0~14 사이의 수로 입력해 주세요.`,'results-section');document.getElementById(`ph-${g.id}`)?.focus();return}if(!Number.isFinite(time)||time<=0||time>CONFIG.MAX_TIME_SECONDS){showSectionError('results-error',`${g.id} 조건의 떠오르는 시간을 0초보다 크고 ${CONFIG.MAX_TIME_SECONDS}초 이하로 입력해 주세요.`,'results-section');document.getElementById(`time-${g.id}`)?.focus();return}clean[g.id]={actualPh:ph,time}}state.results=clean;state.step=5;saveLocal();render()}
 
-        state = saved
-          ? normalize(JSON.parse(saved))
-          : initialState();
-
-      } catch (error) {
-        console.error(error);
-
-        state = initialState();
-
-        storageRemove(CONFIG.STORAGE_KEY);
-      }
+    function makeSvgChart(calc){
+      const W=760,H=340,L=64,R=24,T=26,B=56,plotW=W-L-R,plotH=H-T-B;
+      const points=GROUPS.map((g,i)=>({id:g.id,ph:calc[g.id].ph,rate:calc[g.id].rate,color:['#f04438','#12b76a','#2e90fa'][i]})).filter(p=>Number.isFinite(p.ph)&&Number.isFinite(p.rate)).sort((a,b)=>a.ph-b.ph);
+      const maxRate=Math.max(...points.map(p=>p.rate),.01)*1.15,x=ph=>L+(ph/14)*plotW,y=rate=>T+plotH-(rate/maxRate)*plotH;let grid='';
+      for(let i=0;i<=7;i++){const ph=i*2,xx=x(ph);grid+=`<line x1="${xx}" y1="${T}" x2="${xx}" y2="${T+plotH}" stroke="#e7ecf3"/><text x="${xx}" y="${T+plotH+24}" text-anchor="middle" font-size="12" fill="#667085">${ph}</text>`}
+      for(let i=0;i<=4;i++){const rate=maxRate*i/4,yy=y(rate);grid+=`<line x1="${L}" y1="${yy}" x2="${L+plotW}" y2="${yy}" stroke="#e7ecf3"/><text x="${L-10}" y="${yy+4}" text-anchor="end" font-size="11" fill="#667085">${rate.toFixed(3)}</text>`}
+      const poly=points.length>=2?`<polyline points="${points.map(p=>`${x(p.ph)},${y(p.rate)}`).join(' ')}" fill="none" stroke="#667085" stroke-width="2"/>`:'';
+      const dots=points.map(p=>`<circle cx="${x(p.ph)}" cy="${y(p.rate)}" r="8" fill="${p.color}" stroke="#fff" stroke-width="3"/><text x="${x(p.ph)}" y="${y(p.rate)-14}" text-anchor="middle" font-weight="800" font-size="13" fill="#344054">${p.id}</text>`).join('');
+      return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="pH에 따른 반응 속도 그래프">${grid}<line x1="${L}" y1="${T+plotH}" x2="${L+plotW}" y2="${T+plotH}" stroke="#344054" stroke-width="2"/><line x1="${L}" y1="${T}" x2="${L}" y2="${T+plotH}" stroke="#344054" stroke-width="2"/>${poly}${dots}<text x="${L+plotW/2}" y="${H-8}" text-anchor="middle" font-weight="800" font-size="14" fill="#344054">실제 pH</text><text x="18" y="${T+plotH/2}" text-anchor="middle" font-weight="800" font-size="14" fill="#344054" transform="rotate(-90 18 ${T+plotH/2})">반응 속도 (s⁻¹)</text></svg>`
+    }
+    function renderAnalysis(){const calc=calculateAll();return`${pageHead('📈','4. 결과 해석 및 그래프','측정값과 그래프를 보고 결과를 해석합니다.')}
+      <div class="mini-card"><h3>측정 결과 한눈에 보기</h3><div class="table-wrap"><table class="overview-table"><thead><tr><th>조건</th><th>실제 pH</th><th>떠오르는 시간(s)</th><th>반응 속도(s⁻¹)</th></tr></thead><tbody>${GROUPS.map(g=>`<tr><td><b>${g.id} · ${g.label}</b></td><td>${calc[g.id].ph}</td><td>${Number(calc[g.id].time).toFixed(1)}</td><td><b>${Number(calc[g.id].rate).toFixed(4)}</b></td></tr>`).join('')}</tbody></table></div></div>
+      <div class="chart-wrap" style="margin-top:16px">${makeSvgChart(calc)}<div class="chart-legend">${GROUPS.map((g,i)=>`<span><i class="legend-dot" style="background:${['#f04438','#12b76a','#2e90fa'][i]}"></i>${g.id}: pH ${calc[g.id].ph}, ${Number(calc[g.id].rate).toFixed(4)} s⁻¹</span>`).join('')}</div></div>
+      <div class="criteria-box">다음 단계로 넘어가는 기준: 가설 지지 여부 1개 선택 + 각 서술 답란 ${MIN_LENGTHS.evidence}자 이상. 작성 내용의 정답 여부는 자동으로 판단하지 않습니다.</div>
+      <div class="field" id="supported-field"><label class="required">실험 결과가 가설을 지지하나요?</label><div class="choice-grid">${[['yes','지지한다'],['partial','부분적으로 지지한다'],['no','지지하지 않는다'],['unclear','판단하기 어렵다']].map(([v,t])=>`<label class="choice"><input type="radio" name="supported" value="${v}" ${state.analysis.supported===v?'checked':''} onchange="document.getElementById('supported-field')?.classList.remove('invalid');document.getElementById('supported-error')?.classList.add('hidden')"><strong>${t}</strong></label>`).join('')}</div><p id="supported-error" class="field-error hidden" role="alert"></p></div>
+      <div class="field" id="evidence-field"><label class="required" for="evidence">판단 근거</label><textarea class="textarea" id="evidence" maxlength="500" oninput="updateAnswerGuide('evidence',MIN_LENGTHS.evidence)">${safeText(state.analysis.evidence)}</textarea>${answerGuide('evidence',MIN_LENGTHS.evidence,state.analysis.evidence)}</div>
+      <div class="field" id="explanation-field"><label class="required" for="explanation">결과 해석</label><textarea class="textarea" id="explanation" maxlength="600" oninput="updateAnswerGuide('explanation',MIN_LENGTHS.explanation)">${safeText(state.analysis.explanation)}</textarea>${answerGuide('explanation',MIN_LENGTHS.explanation,state.analysis.explanation)}</div>
+      <div class="field" id="limitation-field"><label class="required" for="limitation">실험의 한계 또는 오차 원인</label><textarea class="textarea" id="limitation" maxlength="500" oninput="updateAnswerGuide('limitation',MIN_LENGTHS.limitation)">${safeText(state.analysis.limitation)}</textarea>${answerGuide('limitation',MIN_LENGTHS.limitation,state.analysis.limitation)}</div>
+      ${footerNav('결론 작성하기','saveAnalysis()')}`}
+    function saveAnalysis(){
+      clearValidationErrors();
+      const supported=document.querySelector('input[name="supported"]:checked')?.value||'',evidence=document.getElementById('evidence').value.trim(),explanation=document.getElementById('explanation').value.trim(),limitation=document.getElementById('limitation').value.trim();
+      if(!supported){showFieldError('supported-field','supported-error','가설 지지 여부를 1개 선택해야 다음 단계로 넘어갈 수 있습니다.');return}
+      if(evidence.length<MIN_LENGTHS.evidence){showFieldError('evidence-field','evidence-error',`현재 ${evidence.length}자입니다. 공백을 제외하고 ${MIN_LENGTHS.evidence}자 이상 작성해 주세요.`,'evidence');return}
+      if(explanation.length<MIN_LENGTHS.explanation){showFieldError('explanation-field','explanation-error',`현재 ${explanation.length}자입니다. 공백을 제외하고 ${MIN_LENGTHS.explanation}자 이상 작성해 주세요.`,'explanation');return}
+      if(limitation.length<MIN_LENGTHS.limitation){showFieldError('limitation-field','limitation-error',`현재 ${limitation.length}자입니다. 공백을 제외하고 ${MIN_LENGTHS.limitation}자 이상 작성해 주세요.`,'limitation');return}
+      state.analysis={supported,evidence,explanation,limitation};state.step=6;saveLocal();render()
     }
 
-    function saveLocal() {
-      state.updatedAt =
-        new Date().toISOString();
-
-      storageSet(
-        CONFIG.STORAGE_KEY,
-        JSON.stringify(state)
-      );
-
-      scheduleSync();
+    function renderConclusion(){return`${pageHead('✅','5. 결론 도출 및 제출','실험 결과를 바탕으로 자신의 결론을 작성합니다.')}
+      <div class="criteria-box">제출 기준: 최종 결론을 공백 제외 ${MIN_LENGTHS.conclusion}자 이상 작성합니다. 내용의 정답 여부는 자동으로 판단하지 않습니다.</div>
+      <div class="field" id="conclusion-field"><label class="required" for="conclusion">최종 결론</label><textarea class="textarea" id="conclusion" style="min-height:220px" maxlength="1200" oninput="updateAnswerGuide('conclusion',MIN_LENGTHS.conclusion)">${safeText(state.conclusion)}</textarea>${answerGuide('conclusion',MIN_LENGTHS.conclusion,state.conclusion)}</div>
+      <div class="notice info">제출한 내용은 교사용 페이지에 저장됩니다.</div>
+      <div class="footer-nav"><button class="btn btn-soft" type="button" onclick="goBack()">← 이전 단계</button><div class="right"><button class="btn btn-soft" type="button" onclick="copySummary()">📋 내용 복사</button><button class="btn btn-primary" id="submitBtn" type="button" onclick="submitFinal()">${state.submitted?'다시 제출하기':'최종 제출하기'} →</button></div></div>`}
+    async function submitFinal(){
+      clearValidationErrors();
+      const conclusion=document.getElementById('conclusion').value.trim();
+      if(conclusion.length<MIN_LENGTHS.conclusion){showFieldError('conclusion-field','conclusion-error',`현재 ${conclusion.length}자입니다. 공백을 제외하고 ${MIN_LENGTHS.conclusion}자 이상 작성해야 제출할 수 있습니다.`,'conclusion');return}
+      state.conclusion=conclusion;state.submitted=true;saveLocal();const btn=document.getElementById('submitBtn');if(btn){btn.disabled=true;btn.textContent='제출 중…'}const result=await syncToServer(true);if(result.ok)showToast('제출되었습니다. 수고했습니다! 🎉',4000);else if(result.localOnly)showToast('이 기기에는 저장됐지만 교사 서버가 아직 연결되지 않았습니다.',5000);render()
     }
 
-    function hasStudentIdentity() {
-      return Boolean(
-        state.student.studentId.trim() &&
-        state.student.name.trim()
-      );
+    async function copySummary(){const calc=calculateAll(),text=[`[카탈레이스 효소 반응 속도 탐구]`,`${state.student.studentId} ${state.student.name}`,`가설: ${state.hypothesis.prediction} / ${state.hypothesis.reason}`,...GROUPS.map(g=>`${g.id} 조건 실제 pH ${calc[g.id].ph}, 시간 ${calc[g.id].time} s, 속도 ${Number(calc[g.id].rate).toFixed(4)} s^-1`),`결론: ${document.getElementById('conclusion')?.value||state.conclusion}`].join('\n');try{await navigator.clipboard.writeText(text);showToast('활동 내용이 복사되었습니다.')}catch{showToast('복사하지 못했습니다.')}}
+
+    function captureCurrentInputs(){
+      try{
+        if(state.step===2){state.hypothesis.prediction=document.querySelector('input[name="prediction"]:checked')?.value||state.hypothesis.prediction;state.hypothesis.reason=document.getElementById('hypothesisReason')?.value.trim()??state.hypothesis.reason}
+        else if(state.step===3){for(const item of VARIABLE_ITEMS)state.design.roles[item.id]=document.getElementById(`role-${item.id}`)?.value||'';for(const g of GROUPS){const v=document.getElementById(`target-${g.id}`)?.value;state.design.targets[g.id]=v===''?'':Number(v)}}
+        else if(state.step===4){const raw=readResultsFromInputs();for(const g of GROUPS){state.results[g.id].actualPh=raw[g.id].actualPh;state.results[g.id].time=raw[g.id].time}}
+        else if(state.step===5){state.analysis.supported=document.querySelector('input[name="supported"]:checked')?.value||state.analysis.supported;state.analysis.evidence=document.getElementById('evidence')?.value.trim()??state.analysis.evidence;state.analysis.explanation=document.getElementById('explanation')?.value.trim()??state.analysis.explanation;state.analysis.limitation=document.getElementById('limitation')?.value.trim()??state.analysis.limitation}
+        else if(state.step===6)state.conclusion=document.getElementById('conclusion')?.value.trim()??state.conclusion;
+      }catch(error){console.warn('capture failed',error)}
     }
-
-    function studentKey() {
-      return state.student.studentId.trim();
-    }
-
-    function calculateAll() {
-      const result = {};
-
-      for (const group of GROUPS) {
-        const ph =
-          Number(
-            state.results[group.id].actualPh
-          );
-
-        const time =
-          Number(
-            state.results[group.id].time
-          );
-
-        result[group.id] = {
-          ph:
-            Number.isFinite(ph)
-              ? ph
-              : null,
-
-          time:
-            Number.isFinite(time)
-              ? time
-              : null,
-
-          rate:
-            Number.isFinite(time) && time > 0
-              ? 1 / time
-              : null
-        };
-      }
-
-      return result;
-    }
-
-    function makePayload(finalSubmit) {
-      return {
-        action:'save',
-        finalSubmit:Boolean(finalSubmit),
-        studentKey:studentKey(),
-        studentId:state.student.studentId.trim(),
-        name:state.student.name.trim(),
-        currentStep:state.step,
-        submitted:state.submitted,
-        hypothesis:state.hypothesis,
-        design:state.design,
-        results:state.results,
-        calculated:calculateAll(),
-        analysis:state.analysis,
-        conclusion:state.conclusion,
-        clientUpdatedAt:state.updatedAt
-      };
-    }
-
-    async function apiPost(payload) {
-      const response =
-        await fetch(
-          CONFIG.API_URL,
-          {
-            method:'POST',
-
-            headers:{
-              'Content-Type':
-                'text/plain;charset=utf-8'
-            },
-
-            body:JSON.stringify(payload),
-            redirect:'follow',
-            cache:'no-store'
-          }
-        );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}`
-        );
-      }
-
-      const text =
-        await response.text();
-
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error(
-          '서버 응답을 읽지 못했습니다. Apps Script 배포 설정을 확인하세요.'
-        );
-      }
-
-      if (!data.ok) {
-        throw new Error(
-          data.message || '서버 처리 실패'
-        );
-      }
-
-      return data;
-    }
-
-    function scheduleSync() {
-      if (!hasStudentIdentity()) {
-        setSyncStatus(
-          'local',
-          '이 기기에 자동 저장'
-        );
-
-        return;
-      }
-
-      if (!isApiConfigured()) {
-        setSyncStatus(
-          'local',
-          '서버 미연결 · 기기에 저장'
-        );
-
-        return;
-      }
-
-      clearTimeout(syncTimer);
-
-      setSyncStatus(
-        'saving',
-        '저장 중…'
-      );
-
-      syncTimer =
-        setTimeout(
-          () => syncToServer(false),
-          CONFIG.AUTO_SYNC_DELAY_MS
-        );
-    }
-
-    async function syncToServer(finalSubmit) {
-      if (
-        !isApiConfigured() ||
-        !hasStudentIdentity()
-      ) {
-        return {
-          ok:false,
-          localOnly:true
-        };
-      }
-
-      try {
-        setSyncStatus(
-          'saving',
-          finalSubmit
-            ? '제출 중…'
-            : '저장 중…'
-        );
-
-        const result =
-          await apiPost(
-            makePayload(finalSubmit)
-          );
-
-        setSyncStatus(
-          'online',
-          finalSubmit
-            ? '제출 완료'
-            : '서버 저장 완료'
-        );
-
-        return result;
-
-      } catch (error) {
-        console.error(error);
-
-        setSyncStatus(
-          'offline',
-          '서버 연결 실패 · 기기에 저장됨'
-        );
-
-        if (finalSubmit) {
-          showToast(
-            `서버 제출에 실패했습니다. 인터넷 연결 후 다시 눌러 주세요. (${error.message})`,
-            5000
-          );
-        }
-
-        return {
-          ok:false,
-          error
-        };
-      }
-    }
-
-    function setSyncStatus(type,text) {
-      const badge =
-        document.getElementById('syncBadge');
-
-      const label =
-        document.getElementById('syncText');
-
-      if (!badge || !label) {
-        return;
-      }
-
-      badge.className =
-        'sync-badge' +
-        (
-          type === 'online'
-            ? ' online'
-            : type === 'saving'
-              ? ' saving'
-              : type === 'offline'
-                ? ' offline'
-                : ''
-        );
-
-      label.textContent = text;
-    }
-
-    function showToast(message,duration = 2800) {
-      const element =
-        document.getElementById('toast');
-
-      element.textContent = message;
-
-      element.classList.remove('hidden');
-
-      clearTimeout(showToast.timer);
-
-      showToast.timer =
-        setTimeout(
-          () => element.classList.add('hidden'),
-          duration
-        );
-    }
-
-    function renderStepper() {
-      const track =
-        document.getElementById('stepTrack');
-
-      track.innerHTML =
-        STEP_NAMES.map(
-          (name,index) => {
-            const number = index + 1;
-
-            const className =
-              number === state.step
-                ? 'active'
-                : number < state.step
-                  ? 'done'
-                  : '';
-
-            const displayNumber =
-              number < state.step
-                ? '✓'
-                : number;
-
-            return `
-              <div class="step-item ${className}">
-                <span class="step-num">
-                  ${displayNumber}
-                </span>
-                <span>${name}</span>
-              </div>
-            `;
-          }
-        ).join('');
-    }
-
-    function pageHead(icon,title,description) {
-      return `
-        <div class="page-head">
-          <div class="page-icon">${icon}</div>
-          <div>
-            <h2>${title}</h2>
-            <p>${description}</p>
-          </div>
-        </div>
-      `;
-    }
-
-    function footerNav(
-      nextLabel,
-      nextFunction,
-      showBack = true
-    ) {
-      return `
-        <div class="footer-nav">
-          ${
-            showBack
-              ? `
-                <button
-                  class="btn btn-soft"
-                  type="button"
-                  onclick="goBack()"
-                >
-                  ← 이전 단계
-                </button>
-              `
-              : `
-                <span class="progress-note">
-                  입력 내용은 자동 저장됩니다.
-                </span>
-              `
-          }
-
-          <div class="right">
-            <button
-              class="btn btn-primary"
-              type="button"
-              onclick="${nextFunction}"
-            >
-              ${nextLabel} →
-            </button>
-          </div>
-        </div>
-      `;
-    }
-
-    function render() {
-      renderStepper();
-
-      const main =
-        document.getElementById('mainCard');
-
-      try {
-        const renderer = [
-          null,
-          renderStart,
-          renderHypothesis,
-          renderDesign,
-          renderResults,
-          renderAnalysis,
-          renderConclusion
-        ][state.step];
-
-        main.innerHTML =
-          renderer();
-
-        main.focus({
-          preventScroll:true
-        });
-
-        if (state.step === 4) {
-          updateResultPreview();
-        }
-
-      } catch (error) {
-        console.error(
-          'render failed',
-          error
-        );
-
-        main.innerHTML = `
-          <div class="error-boundary">
-            <h2>화면을 불러오지 못했습니다.</h2>
-
-            <button
-              class="btn btn-danger"
-              onclick="resetActivity(true)"
-            >
-              저장 데이터 비우고 다시 시작
-            </button>
-          </div>
-        `;
-      }
-    }
-
-    function renderStart() {
-      return `
-        ${pageHead(
-          '👋',
-          '활동 시작하기',
-          '학번과 이름을 각각 입력합니다.'
-        )}
-
-        <div class="notice info">
-          <b>디벗 사용 안내</b><br>
-          입력 내용은 같은 브라우저에 자동 저장됩니다.
-        </div>
-
-        <div class="grid-2">
-          <div class="field">
-            <label
-              class="required"
-              for="studentId"
-            >
-              학번
-            </label>
-
-            <input
-              class="input"
-              id="studentId"
-              inputmode="numeric"
-              maxlength="10"
-              value="${safeText(state.student.studentId)}"
-            >
-          </div>
-
-          <div class="field">
-            <label
-              class="required"
-              for="studentName"
-            >
-              이름
-            </label>
-
-            <input
-              class="input"
-              id="studentName"
-              autocomplete="name"
-              maxlength="20"
-              value="${safeText(state.student.name)}"
-            >
-          </div>
-        </div>
-
-        <div class="mini-card">
-          <h3>탐구 문제</h3>
-
-          <p
-            style="
-              margin:0;
-              font-size:18px;
-              font-weight:850;
-            "
-          >
-            용액의 pH가 달라지면 카탈레이스의 반응 속도는 어떻게 달라질까?
-          </p>
-        </div>
-
-        ${footerNav(
-          '가설 세우기',
-          'saveStart()',
-          false
-        )}
-      `;
-    }
-
-    function saveStart() {
-      const studentId =
-        document
-          .getElementById('studentId')
-          .value
-          .trim();
-
-      const name =
-        document
-          .getElementById('studentName')
-          .value
-          .trim();
-
-      if (!studentId || !name) {
-        return showToast(
-          '학번과 이름을 모두 입력해 주세요.'
-        );
-      }
-
-      if (!/^\d{3,10}$/.test(studentId)) {
-        return showToast(
-          '학번은 숫자로 입력해 주세요.'
-        );
-      }
-
-      state.student = {
-        studentId,
-        name
-      };
-
-      state.step = 2;
-
-      saveLocal();
-      render();
-    }
-
-    function renderHypothesis() {
-      const choices = [
-        [
-          'acid',
-          '산성 조건에서 가장 빠를 것이다'
-        ],
-        [
-          'neutral',
-          '중성에 가까운 조건에서 가장 빠를 것이다'
-        ],
-        [
-          'base',
-          '염기성 조건에서 가장 빠를 것이다'
-        ],
-        [
-          'same',
-          'pH가 달라도 큰 차이가 없을 것이다'
-        ]
-      ];
-
-      return `
-        ${pageHead(
-          '💡',
-          '1. 가설 설정',
-          '실험 전에 예상되는 결과와 그 까닭을 작성합니다.'
-        )}
-
-        <div class="field">
-          <label class="required">
-            예상되는 결과
-          </label>
-
-          <div class="choice-grid">
-            ${
-              choices.map(
-                ([value,text]) => `
-                  <label class="choice">
-                    <input
-                      type="radio"
-                      name="prediction"
-                      value="${value}"
-                      ${
-                        state.hypothesis.prediction === value
-                          ? 'checked'
-                          : ''
-                      }
-                    >
-
-                    <strong>${text}</strong>
-                  </label>
-                `
-              ).join('')
-            }
-          </div>
-        </div>
-
-        <div class="field">
-          <label
-            class="required"
-            for="hypothesisReason"
-          >
-            예상한 까닭
-          </label>
-
-          <textarea
-            class="textarea"
-            id="hypothesisReason"
-            maxlength="400"
-          >${safeText(state.hypothesis.reason)}</textarea>
-        </div>
-
-        ${footerNav(
-          '실험 설계하기',
-          'saveHypothesis()'
-        )}
-      `;
-    }
-
-    function saveHypothesis() {
-      const prediction =
-        document.querySelector(
-          'input[name="prediction"]:checked'
-        )?.value || '';
-
-      const reason =
-        document
-          .getElementById('hypothesisReason')
-          .value
-          .trim();
-
-      if (!prediction) {
-        return showToast(
-          '예상되는 결과를 선택해 주세요.'
-        );
-      }
-
-      if (reason.length < 8) {
-        return showToast(
-          '예상한 까닭을 작성해 주세요.'
-        );
-      }
-
-      state.hypothesis = {
-        prediction,
-        reason
-      };
-
-      state.step = 3;
-
-      saveLocal();
-      render();
-    }
-
-    function roleSelectHtml(item) {
-      const value =
-        state.design.roles[item.id] || '';
-
-      return `
-        <select
-          class="select"
-          id="role-${item.id}"
-        >
-          <option value="">선택</option>
-
-          ${
-            Object.entries(ROLE_LABELS)
-              .map(
-                ([role,label]) => `
-                  <option
-                    value="${role}"
-                    ${
-                      value === role
-                        ? 'selected'
-                        : ''
-                    }
-                  >
-                    ${label}
-                  </option>
-                `
-              )
-              .join('')
-          }
-        </select>
-      `;
-    }
-
-    function targetText(value) {
-      return value === ''
-        ? '(입력한 값)'
-        : safeText(value);
-    }
-
-    function procedureHtml(targets) {
-      return [
-        '보안경과 장갑을 착용하고 실험 도구를 준비한다.',
-
-        'A, B, C 용기에 같은 농도와 부피의 과산화수소수를 넣는다.',
-
-        `희석한 염산·수산화나트륨과 물을 사용하여 A는 pH ${targetText(targets.A)}, B는 pH ${targetText(targets.B)}, C는 pH ${targetText(targets.C)} 부근으로 맞춘다. 세 용액의 전체 부피는 같게 한다.`,
-
-        'pH 측정기로 각 용액의 반응 직전 실제 pH를 측정한다. 조건을 바꿀 때마다 전극을 증류수로 씻는다.',
-
-        '같은 크기의 거름종이 원판을 카탈레이스 용액에 같은 시간 동안 담근 뒤, 같은 방법으로 겉의 남은 용액을 제거한다.',
-
-        '거름종이 원판을 용액 바닥까지 넣는 순간 시간을 재고, 원판이 수면에 도달하면 시간을 멈춘다.',
-
-        '각 pH 조건에서 한 번씩 측정하고, 조건마다 새 거름종이 원판을 사용한다.',
-
-        '각 조건의 반응 속도를 1 ÷ 떠오르는 시간(s)으로 계산한다.'
-      ]
-      .map(
-        text => `
-          <li>
-            <div>${text}</div>
-          </li>
-        `
-      )
-      .join('');
-    }
-
-    function currentTargets() {
-      const result = {};
-
-      for (const group of GROUPS) {
-        const element =
-          document.getElementById(
-            `target-${group.id}`
-          );
-
-        result[group.id] =
-          element
-            ? element.value
-            : state.design.targets[group.id];
-      }
-
-      return result;
-    }
-
-    function updateProcedurePreview() {
-      const list =
-        document.getElementById(
-          'procedureList'
-        );
-
-      if (list) {
-        list.innerHTML =
-          procedureHtml(
-            currentTargets()
-          );
-      }
-    }
-
-    function renderDesign() {
-      return `
-        ${pageHead(
-          '🧩',
-          '2. 실험 설계',
-          '각 변인을 조작 변인, 통제 변인, 종속 변인으로 분류합니다.'
-        )}
-
-        <div class="mini-card">
-          <h3>① 변인 분류</h3>
-
-          <div class="table-wrap">
-            <table class="variable-table">
-              <thead>
-                <tr>
-                  <th>변인</th>
-                  <th class="role-cell">분류</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                ${
-                  VARIABLE_ITEMS.map(
-                    item => `
-                      <tr
-                        id="row-${item.id}"
-                        class="variable-row"
-                      >
-                        <td>
-                          <b>${item.label}</b>
-                        </td>
-
-                        <td class="role-cell">
-                          ${roleSelectHtml(item)}
-                        </td>
-                      </tr>
-                    `
-                  ).join('')
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <h3 style="margin:22px 0 10px">
-          ② 실험군별 목표 pH
-        </h3>
-
-        <div class="grid-3">
-          ${
-            GROUPS.map(
-              group => `
-                <div
-                  class="group-card ${group.className}"
-                >
-                  <span class="group-badge">
-                    ${group.id} · ${group.label}
-                  </span>
-
-                  <div
-                    class="field"
-                    style="margin:0"
-                  >
-                    <label
-                      class="required"
-                      for="target-${group.id}"
-                    >
-                      목표 pH
-                    </label>
-
-                    <input
-                      class="input"
-                      id="target-${group.id}"
-                      type="number"
-                      min="0"
-                      max="14"
-                      step="0.1"
-                      value="${safeText(state.design.targets[group.id])}"
-                      oninput="updateProcedurePreview()"
-                    >
-                  </div>
-                </div>
-              `
-            ).join('')
-          }
-        </div>
-
-        <div
-          class="mini-card"
-          style="margin-top:18px"
-        >
-          <h3>자동 생성 실험 과정</h3>
-
-          <ol
-            id="procedureList"
-            class="procedure"
-          >
-            ${procedureHtml(state.design.targets)}
-          </ol>
-        </div>
-
-        ${footerNav(
-          '결과 기록하기',
-          'saveDesign()'
-        )}
-      `;
-    }
-
-    function saveDesign() {
-      const roles = {};
-
-      let missing = 0;
-      let wrong = 0;
-
-      for (const item of VARIABLE_ITEMS) {
-        const value =
-          document
-            .getElementById(
-              `role-${item.id}`
-            )
-            .value;
-
-        roles[item.id] = value;
-
-        const row =
-          document.getElementById(
-            `row-${item.id}`
-          );
-
-        row.classList.remove('invalid');
-
-        if (!value) {
-          missing += 1;
-
-          row.classList.add('invalid');
-
-        } else if (value !== item.correct) {
-          wrong += 1;
-
-          row.classList.add('invalid');
-        }
-      }
-
-      if (missing) {
-        return showToast(
-          `분류하지 않은 변인이 ${missing}개 있습니다.`
-        );
-      }
-
-      if (wrong) {
-        return showToast(
-          `분류를 다시 확인할 변인이 ${wrong}개 있습니다.`
-        );
-      }
-
-      const targets =
-        Object.fromEntries(
-          GROUPS.map(
-            group => [
-              group.id,
-              Number(
-                document
-                  .getElementById(
-                    `target-${group.id}`
-                  )
-                  .value
-              )
-            ]
-          )
-        );
-
-      if (
-        Object.values(targets).some(
-          value =>
-            !Number.isFinite(value) ||
-            value < 0 ||
-            value > 14
-        )
-      ) {
-        return showToast(
-          'A, B, C의 목표 pH를 모두 입력해 주세요.'
-        );
-      }
-
-      if (
-        !(
-          targets.A < targets.B &&
-          targets.B < targets.C
-        )
-      ) {
-        return showToast(
-          'A, B, C의 목표 pH 순서를 확인해 주세요.'
-        );
-      }
-
-      state.design = {
-        roles,
-        targets
-      };
-
-      state.step = 4;
-
-      saveLocal();
-      render();
-    }
-
-    function renderResults() {
-      const calculated =
-        calculateAll();
-
-      return `
-        ${pageHead(
-          '⏱️',
-          '3. 결과 기록',
-          '각 조건의 실제 pH와 떠오르는 시간을 기록합니다.'
-        )}
-
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>조건</th>
-                <th>실제 pH</th>
-                <th>떠오르는 시간(s)</th>
-                <th>반응 속도 1/t (s⁻¹)</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              ${
-                GROUPS.map(
-                  group => `
-                    <tr>
-                      <td>
-                        <b>${group.id}</b>
-                        ·
-                        ${group.label}
-                      </td>
-
-                      <td>
-                        <input
-                          class="table-input"
-                          id="ph-${group.id}"
-                          type="number"
-                          inputmode="decimal"
-                          min="0"
-                          max="14"
-                          step="0.1"
-                          value="${safeText(state.results[group.id].actualPh)}"
-                          oninput="updateResultPreview()"
-                        >
-                      </td>
-
-                      <td>
-                        <input
-                          class="table-input"
-                          id="time-${group.id}"
-                          type="number"
-                          inputmode="decimal"
-                          min="0.1"
-                          max="600"
-                          step="0.1"
-                          value="${safeText(state.results[group.id].time)}"
-                          oninput="updateResultPreview()"
-                        >
-                      </td>
-
-                      <td
-                        id="rate-${group.id}"
-                        class="rate-output"
-                      >
-                        ${
-                          Number.isFinite(
-                            calculated[group.id].rate
-                          )
-                            ? calculated[group.id].rate.toFixed(4)
-                            : '-'
-                        }
-                      </td>
-                    </tr>
-                  `
-                ).join('')
-              }
-            </tbody>
-          </table>
-        </div>
-
-        ${footerNav(
-          '그래프와 결과 해석',
-          'saveResults()'
-        )}
-      `;
-    }
-
-    function readResultsFromInputs() {
-      const output = {};
-
-      for (const group of GROUPS) {
-        output[group.id] = {
-          actualPh:
-            document.getElementById(
-              `ph-${group.id}`
-            )?.value ?? '',
-
-          time:
-            document.getElementById(
-              `time-${group.id}`
-            )?.value ?? ''
-        };
-      }
-
-      return output;
-    }
-
-    function updateResultPreview() {
-      for (const group of GROUPS) {
-        const time =
-          Number(
-            document.getElementById(
-              `time-${group.id}`
-            )?.value
-          );
-
-        const cell =
-          document.getElementById(
-            `rate-${group.id}`
-          );
-
-        if (cell) {
-          cell.textContent =
-            Number.isFinite(time) && time > 0
-              ? (1 / time).toFixed(4)
-              : '-';
-        }
-      }
-    }
-
-    function saveResults() {
-      const raw =
-        readResultsFromInputs();
-
-      const clean = {};
-
-      for (const group of GROUPS) {
-        const ph =
-          Number(
-            raw[group.id].actualPh
-          );
-
-        const time =
-          Number(
-            raw[group.id].time
-          );
-
-        if (
-          !Number.isFinite(ph) ||
-          ph < 0 ||
-          ph > 14
-        ) {
-          return showToast(
-            `${group.id} 조건의 실제 pH를 확인해 주세요.`
-          );
-        }
-
-        if (
-          !Number.isFinite(time) ||
-          time <= 0 ||
-          time > CONFIG.MAX_TIME_SECONDS
-        ) {
-          return showToast(
-            `${group.id} 조건의 시간을 확인해 주세요.`
-          );
-        }
-
-        clean[group.id] = {
-          actualPh:ph,
-          time
-        };
-      }
-
-      state.results = clean;
-      state.step = 5;
-
-      saveLocal();
-      render();
-    }
-
-    function makeSvgChart(calculated) {
-      const width = 760;
-      const height = 340;
-
-      const left = 64;
-      const right = 24;
-      const top = 26;
-      const bottom = 56;
-
-      const plotWidth =
-        width - left - right;
-
-      const plotHeight =
-        height - top - bottom;
-
-      const points =
-        GROUPS.map(
-          (group,index) => ({
-            id:group.id,
-
-            ph:
-              calculated[group.id].ph,
-
-            rate:
-              calculated[group.id].rate,
-
-            color:[
-              '#f04438',
-              '#12b76a',
-              '#2e90fa'
-            ][index]
-          })
-        )
-        .filter(
-          point =>
-            Number.isFinite(point.ph) &&
-            Number.isFinite(point.rate)
-        )
-        .sort(
-          (a,b) => a.ph - b.ph
-        );
-
-      const maxRate =
-        Math.max(
-          ...points.map(
-            point => point.rate
-          ),
-          .01
-        ) * 1.15;
-
-      const x =
-        ph =>
-          left +
-          (ph / 14) * plotWidth;
-
-      const y =
-        rate =>
-          top +
-          plotHeight -
-          (rate / maxRate) *
-          plotHeight;
-
-      let grid = '';
-
-      for (let index = 0; index <= 7; index += 1) {
-        const ph = index * 2;
-        const xPosition = x(ph);
-
-        grid += `
-          <line
-            x1="${xPosition}"
-            y1="${top}"
-            x2="${xPosition}"
-            y2="${top + plotHeight}"
-            stroke="#e7ecf3"
-          />
-
-          <text
-            x="${xPosition}"
-            y="${top + plotHeight + 24}"
-            text-anchor="middle"
-            font-size="12"
-            fill="#667085"
-          >
-            ${ph}
-          </text>
-        `;
-      }
-
-      for (let index = 0; index <= 4; index += 1) {
-        const rate =
-          maxRate * index / 4;
-
-        const yPosition =
-          y(rate);
-
-        grid += `
-          <line
-            x1="${left}"
-            y1="${yPosition}"
-            x2="${left + plotWidth}"
-            y2="${yPosition}"
-            stroke="#e7ecf3"
-          />
-
-          <text
-            x="${left - 10}"
-            y="${yPosition + 4}"
-            text-anchor="end"
-            font-size="11"
-            fill="#667085"
-          >
-            ${rate.toFixed(3)}
-          </text>
-        `;
-      }
-
-      const polyline =
-        points.length >= 2
-          ? `
-            <polyline
-              points="${
-                points.map(
-                  point =>
-                    `${x(point.ph)},${y(point.rate)}`
-                ).join(' ')
-              }"
-              fill="none"
-              stroke="#667085"
-              stroke-width="2"
-            />
-          `
-          : '';
-
-      const dots =
-        points.map(
-          point => `
-            <circle
-              cx="${x(point.ph)}"
-              cy="${y(point.rate)}"
-              r="8"
-              fill="${point.color}"
-              stroke="#fff"
-              stroke-width="3"
-            />
-
-            <text
-              x="${x(point.ph)}"
-              y="${y(point.rate) - 14}"
-              text-anchor="middle"
-              font-weight="800"
-              font-size="13"
-              fill="#344054"
-            >
-              ${point.id}
-            </text>
-          `
-        ).join('');
-
-      return `
-        <svg
-          viewBox="0 0 ${width} ${height}"
-          role="img"
-          aria-label="pH에 따른 반응 속도 그래프"
-        >
-          ${grid}
-
-          <line
-            x1="${left}"
-            y1="${top + plotHeight}"
-            x2="${left + plotWidth}"
-            y2="${top + plotHeight}"
-            stroke="#344054"
-            stroke-width="2"
-          />
-
-          <line
-            x1="${left}"
-            y1="${top}"
-            x2="${left}"
-            y2="${top + plotHeight}"
-            stroke="#344054"
-            stroke-width="2"
-          />
-
-          ${polyline}
-          ${dots}
-
-          <text
-            x="${left + plotWidth / 2}"
-            y="${height - 8}"
-            text-anchor="middle"
-            font-weight="800"
-            font-size="14"
-            fill="#344054"
-          >
-            실제 pH
-          </text>
-
-          <text
-            x="18"
-            y="${top + plotHeight / 2}"
-            text-anchor="middle"
-            font-weight="800"
-            font-size="14"
-            fill="#344054"
-            transform="rotate(-90 18 ${top + plotHeight / 2})"
-          >
-            반응 속도 (s⁻¹)
-          </text>
-        </svg>
-      `;
-    }
-
-    function renderAnalysis() {
-      const calculated =
-        calculateAll();
-
-      return `
-        ${pageHead(
-          '📈',
-          '4. 결과 해석 및 그래프',
-          '측정값과 그래프를 보고 결과를 해석합니다.'
-        )}
-
-        <div class="chart-wrap">
-          ${makeSvgChart(calculated)}
-
-          <div class="chart-legend">
-            ${
-              GROUPS.map(
-                (group,index) => `
-                  <span>
-                    <i
-                      class="legend-dot"
-                      style="
-                        background:${
-                          [
-                            '#f04438',
-                            '#12b76a',
-                            '#2e90fa'
-                          ][index]
-                        }
-                      "
-                    ></i>
-
-                    ${group.id}:
-                    pH ${calculated[group.id].ph},
-                    ${Number(calculated[group.id].rate).toFixed(4)}
-                    s⁻¹
-                  </span>
-                `
-              ).join('')
-            }
-          </div>
-        </div>
-
-        <div
-          class="field"
-          style="margin-top:20px"
-        >
-          <label class="required">
-            실험 결과가 가설을 지지하나요?
-          </label>
-
-          <div class="choice-grid">
-            ${
-              [
-                ['yes','지지한다'],
-                ['partial','부분적으로 지지한다'],
-                ['no','지지하지 않는다'],
-                ['unclear','판단하기 어렵다']
-              ]
-              .map(
-                ([value,text]) => `
-                  <label class="choice">
-                    <input
-                      type="radio"
-                      name="supported"
-                      value="${value}"
-                      ${
-                        state.analysis.supported === value
-                          ? 'checked'
-                          : ''
-                      }
-                    >
-
-                    <strong>${text}</strong>
-                  </label>
-                `
-              )
-              .join('')
-            }
-          </div>
-        </div>
-
-        <div class="field">
-          <label
-            class="required"
-            for="evidence"
-          >
-            판단 근거
-          </label>
-
-          <textarea
-            class="textarea"
-            id="evidence"
-            maxlength="500"
-          >${safeText(state.analysis.evidence)}</textarea>
-        </div>
-
-        <div class="field">
-          <label
-            class="required"
-            for="explanation"
-          >
-            결과 해석
-          </label>
-
-          <textarea
-            class="textarea"
-            id="explanation"
-            maxlength="600"
-          >${safeText(state.analysis.explanation)}</textarea>
-        </div>
-
-        <div class="field">
-          <label
-            class="required"
-            for="limitation"
-          >
-            실험의 한계 또는 오차 원인
-          </label>
-
-          <textarea
-            class="textarea"
-            id="limitation"
-            maxlength="500"
-          >${safeText(state.analysis.limitation)}</textarea>
-        </div>
-
-        ${footerNav(
-          '결론 작성하기',
-          'saveAnalysis()'
-        )}
-      `;
-    }
-
-    function saveAnalysis() {
-      const supported =
-        document.querySelector(
-          'input[name="supported"]:checked'
-        )?.value || '';
-
-      const evidence =
-        document
-          .getElementById('evidence')
-          .value
-          .trim();
-
-      const explanation =
-        document
-          .getElementById('explanation')
-          .value
-          .trim();
-
-      const limitation =
-        document
-          .getElementById('limitation')
-          .value
-          .trim();
-
-      if (!supported) {
-        return showToast(
-          '가설 지지 여부를 선택해 주세요.'
-        );
-      }
-
-      if (evidence.length < 8) {
-        return showToast(
-          '판단 근거를 작성해 주세요.'
-        );
-      }
-
-      if (explanation.length < 8) {
-        return showToast(
-          '결과 해석을 작성해 주세요.'
-        );
-      }
-
-      if (limitation.length < 8) {
-        return showToast(
-          '실험의 한계 또는 오차 원인을 작성해 주세요.'
-        );
-      }
-
-      state.analysis = {
-        supported,
-        evidence,
-        explanation,
-        limitation
-      };
-
-      state.step = 6;
-
-      saveLocal();
-      render();
-    }
-
-    function renderConclusion() {
-      return `
-        ${pageHead(
-          '✅',
-          '5. 결론 도출 및 제출',
-          '실험 결과를 바탕으로 자신의 결론을 작성합니다.'
-        )}
-
-        <div class="field">
-          <label
-            class="required"
-            for="conclusion"
-          >
-            최종 결론
-          </label>
-
-          <textarea
-            class="textarea"
-            id="conclusion"
-            style="min-height:220px"
-            maxlength="1200"
-          >${safeText(state.conclusion)}</textarea>
-        </div>
-
-        <div class="notice info">
-          제출한 내용은 교사용 페이지에 저장됩니다.
-        </div>
-
-        <div class="footer-nav">
-          <button
-            class="btn btn-soft"
-            type="button"
-            onclick="goBack()"
-          >
-            ← 이전 단계
-          </button>
-
-          <div class="right">
-            <button
-              class="btn btn-soft"
-              type="button"
-              onclick="copySummary()"
-            >
-              📋 내용 복사
-            </button>
-
-            <button
-              class="btn btn-primary"
-              id="submitBtn"
-              type="button"
-              onclick="submitFinal()"
-            >
-              ${
-                state.submitted
-                  ? '다시 제출하기'
-                  : '최종 제출하기'
-              }
-              →
-            </button>
-          </div>
-        </div>
-      `;
-    }
-
-    async function submitFinal() {
-      const conclusion =
-        document
-          .getElementById('conclusion')
-          .value
-          .trim();
-
-      if (conclusion.length < 15) {
-        return showToast(
-          '최종 결론을 작성해 주세요.'
-        );
-      }
-
-      state.conclusion = conclusion;
-      state.submitted = true;
-
-      saveLocal();
-
-      const button =
-        document.getElementById(
-          'submitBtn'
-        );
-
-      if (button) {
-        button.disabled = true;
-        button.textContent = '제출 중…';
-      }
-
-      const result =
-        await syncToServer(true);
-
-      if (result.ok) {
-        showToast(
-          '제출되었습니다. 수고했습니다! 🎉',
-          4000
-        );
-
-      } else if (result.localOnly) {
-        showToast(
-          '이 기기에는 저장됐지만 교사 서버가 아직 연결되지 않았습니다.',
-          5000
-        );
-      }
-
-      render();
-    }
-
-    async function copySummary() {
-      const calculated =
-        calculateAll();
-
-      const text = [
-        '[카탈레이스 효소 반응 속도 탐구]',
-
-        `${state.student.studentId} ${state.student.name}`,
-
-        `가설: ${state.hypothesis.prediction} / ${state.hypothesis.reason}`,
-
-        ...GROUPS.map(
-          group =>
-            `${group.id} 조건 실제 pH ${calculated[group.id].ph}, 시간 ${calculated[group.id].time} s, 속도 ${Number(calculated[group.id].rate).toFixed(4)} s^-1`
-        ),
-
-        `결론: ${
-          document.getElementById('conclusion')?.value ||
-          state.conclusion
-        }`
-      ].join('\n');
-
-      try {
-        await navigator.clipboard.writeText(text);
-
-        showToast(
-          '활동 내용이 복사되었습니다.'
-        );
-
-      } catch {
-        showToast(
-          '복사하지 못했습니다.'
-        );
-      }
-    }
-
-    function captureCurrentInputs() {
-      try {
-        if (state.step === 2) {
-          state.hypothesis.prediction =
-            document.querySelector(
-              'input[name="prediction"]:checked'
-            )?.value ||
-            state.hypothesis.prediction;
-
-          state.hypothesis.reason =
-            document.getElementById(
-              'hypothesisReason'
-            )?.value.trim() ??
-            state.hypothesis.reason;
-
-        } else if (state.step === 3) {
-          for (const item of VARIABLE_ITEMS) {
-            state.design.roles[item.id] =
-              document.getElementById(
-                `role-${item.id}`
-              )?.value || '';
-          }
-
-          for (const group of GROUPS) {
-            const value =
-              document.getElementById(
-                `target-${group.id}`
-              )?.value;
-
-            state.design.targets[group.id] =
-              value === ''
-                ? ''
-                : Number(value);
-          }
-
-        } else if (state.step === 4) {
-          const raw =
-            readResultsFromInputs();
-
-          for (const group of GROUPS) {
-            state.results[group.id].actualPh =
-              raw[group.id].actualPh;
-
-            state.results[group.id].time =
-              raw[group.id].time;
-          }
-
-        } else if (state.step === 5) {
-          state.analysis.supported =
-            document.querySelector(
-              'input[name="supported"]:checked'
-            )?.value ||
-            state.analysis.supported;
-
-          state.analysis.evidence =
-            document.getElementById(
-              'evidence'
-            )?.value.trim() ??
-            state.analysis.evidence;
-
-          state.analysis.explanation =
-            document.getElementById(
-              'explanation'
-            )?.value.trim() ??
-            state.analysis.explanation;
-
-          state.analysis.limitation =
-            document.getElementById(
-              'limitation'
-            )?.value.trim() ??
-            state.analysis.limitation;
-
-        } else if (state.step === 6) {
-          state.conclusion =
-            document.getElementById(
-              'conclusion'
-            )?.value.trim() ??
-            state.conclusion;
-        }
-
-      } catch (error) {
-        console.warn(
-          'capture failed',
-          error
-        );
-      }
-    }
-
-    function goBack() {
-      captureCurrentInputs();
-
-      if (state.step > 1) {
-        state.step -= 1;
-      }
-
-      saveLocal();
-      render();
-    }
-
-    function resetActivity(force = false) {
-      if (
-        !force &&
-        !confirm(
-          '이 기기에 저장된 활동 내용을 모두 지우고 처음부터 시작할까요?'
-        )
-      ) {
-        return;
-      }
-
-      storageRemove(
-        CONFIG.STORAGE_KEY
-      );
-
-      state = initialState();
-
-      setSyncStatus(
-        'local',
-        '이 기기에 자동 저장'
-      );
-
-      render();
-
-      showToast(
-        '활동지가 초기화되었습니다.'
-      );
-    }
-
-    window.addEventListener(
-      'online',
-      () => {
-        setSyncStatus(
-          'saving',
-          '재연결 · 저장 확인 중…'
-        );
-
-        syncToServer(false);
-      }
-    );
-
-    window.addEventListener(
-      'offline',
-      () => {
-        setSyncStatus(
-          'offline',
-          '오프라인 · 기기에 저장'
-        );
-      }
-    );
-
-    window.addEventListener(
-      'beforeunload',
-      captureCurrentInputs
-    );
-
-    document.addEventListener(
-      'DOMContentLoaded',
-      () => {
-        loadState();
-        render();
-
-        if (!navigator.onLine) {
-          setSyncStatus(
-            'offline',
-            '오프라인 · 기기에 저장'
-          );
-
-        } else if (!isApiConfigured()) {
-          setSyncStatus(
-            'local',
-            '서버 미연결 · 기기에 저장'
-          );
-
-        } else if (hasStudentIdentity()) {
-          syncToServer(false);
-        }
-      }
-    );
+    function goBack(){captureCurrentInputs();if(state.step>1)state.step--;saveLocal();render()}
+    function resetActivity(force=false){if(!force&&!confirm('이 기기에 저장된 활동 내용을 모두 지우고 처음부터 시작할까요?'))return;storageRemove(CONFIG.STORAGE_KEY);state=initialState();setSyncStatus('local','이 기기에 자동 저장');render();showToast('활동지가 초기화되었습니다.')}
+
+    window.addEventListener('online',()=>{setSyncStatus('saving','재연결 · 저장 확인 중…');syncToServer(false)});
+    window.addEventListener('offline',()=>setSyncStatus('offline','오프라인 · 기기에 저장'));
+    window.addEventListener('beforeunload',captureCurrentInputs);
+    document.addEventListener('DOMContentLoaded',()=>{loadState();render();if(!navigator.onLine)setSyncStatus('offline','오프라인 · 기기에 저장');else if(!isApiConfigured())setSyncStatus('local','서버 미연결 · 기기에 저장');else if(hasStudentIdentity())syncToServer(false)});
   </script>
 </body>
 </html>
