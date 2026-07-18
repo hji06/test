@@ -28,7 +28,7 @@ header{display:flex;justify-content:space-between;align-items:center;gap:14px;pa
 <div id="overlay" class="overlay hidden"><div class="modal"><div class="modal-head"><h2>학생 응답 상세</h2><button class="close" onclick="closeDetail()">×</button></div><div id="detail"></div></div></div>
 <script>
 'use strict';
-const CONFIG={API_URL:'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE',REFRESH_MS:20000};
+const CONFIG={API_URL:'https://script.google.com/macros/s/AKfycbxL_AuuqF5JIVjAA-o_p9v0ntTLTV-5G8LcSAU2_SgmiDfH9srfe7WC1UN6QU-C5YYU/exec',REFRESH_MS:20000};
 const STEP_NAMES=['시작','가설','실험 설계','결과 기록','해석·그래프','결론·제출'];
 let rows=[],password='';
 function safe(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;")}
